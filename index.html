@@ -9,7 +9,6 @@
     <!-- Load Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
     <!-- Load face-api.js for liveness check -->
-    <!-- We use defer to make sure it loads after the HTML is parsed -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <!-- Use Inter font family -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,12 +50,10 @@
             font-size: 0.875rem; color: #d1d5db;
             margin-left: 10px; font-style: italic;
         }
-        /* Style for disabled select */
         select:disabled {
             background-color: rgba(255, 255, 255, 0.1);
             color: rgba(255, 255, 255, 0.4);
         }
-        /* Style for phone input rows */
         .phone-input-row {
             display: flex;
             align-items: center;
@@ -75,15 +72,28 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
         }
         .phone-input-row .remove-phone-btn:hover {
             background-color: rgba(255, 82, 82, 1);
+        }
+        /* Error border for phone validation */
+        .input-error {
+            border: 2px solid #f87171 !important; /* red-400 */
+            box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
         }
     </style>
 </head>
 <body class="bg-gray-900">
 
     <div class="max-w-md mx-auto h-screen animated-gradient shadow-2xl overflow-hidden">
+        
+        <!-- Global Error Bar (New) -->
+        <div id="global-error-bar" class="hidden absolute top-0 left-0 right-0 bg-red-600 text-white p-3 text-center z-[100] shadow-lg" style="transform: translateY(-100%); transition: transform 0.3s ease-out;">
+            <span id="global-error-text"></span>
+            <button id="global-error-close" class="absolute top-1/2 -translate-y-1/2 right-3 text-white font-bold text-2xl">&times;</button>
+        </div>
+
         <div class="relative w-full h-full text-white">
 
             <!-- 
@@ -165,12 +175,10 @@
                                 <input type="text" id="meetup-nickname" class="form-input">
                             </div>
                              
-                            <!-- Phone Numbers Section -->
                             <div id="phone-numbers-container" class="space-y-2">
                                 <label class="block text-sm font-medium text-gray-100">Phone(s) (11 digits, optional)</label>
                                 <div class="phone-input-row">
-                                    <input type="text" class="form-input phone-input" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits." maxlength="11" placeholder="08012345678">
-                                    <!-- No remove button for the first one -->
+                                    <input type="tel" class="form-input phone-input" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits." maxlength="11" placeholder="08012345678">
                                 </div>
                             </div>
                             <button type="button" id="btn-add-phone" class="w-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center space-x-1">
@@ -212,7 +220,6 @@
                                 <textarea id="meetup-address" rows="2" required class="form-input" placeholder="e.g., '123 Main St, Apt 4B'"></textarea>
                             </div>
                             
-                            <!-- State and LGA Dropdowns -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label for="meetup-state" class="block text-sm font-medium text-gray-100">State *</label>
@@ -297,7 +304,6 @@
                                 <div class="detail-item"><span class="detail-label">Last Name</span><span id="details-lastName" class="detail-value"></span></div>
                             </div>
                             <div class="detail-item"><span class="detail-label">Nickname</span><span id="details-nickname" class="detail-value"></span></div>
-                            <!-- Updated Phone Detail -->
                             <div class="detail-item"><span class="detail-label">Phone(s)</span><span id="details-phone" class="detail-value whitespace-pre-wrap"></span></div>
                             <div class="detail-item"><span class="detail-label">Friends/Acquaintances</span><span id="details-friends" class="detail-value whitespace-pre-wrap"></span></div>
                             <div class="detail-item"><span class="detail-label">Stranger's Photo</span><span id="details-stranger-image" class="detail-value text-cyan-300"></span></div>
@@ -305,7 +311,6 @@
                             <div class="detail-item"><span class="detail-label">Place Type</span><span id="details-place-type" class="detail-value"></span></div>
                             <div class="detail-item"><span class="detail-label">Address</span><span id="details-address" class="detail-value whitespace-pre-wrap"></span></div>
                             <div class="grid grid-cols-2 gap-3">
-                                <!-- Updated State/LGA Details -->
                                 <div class="detail-item"><span class="detail-label">State</span><span id="details-state" class="detail-value"></span></div>
                                 <div class="detail-item"><span class="detail-label">LGA</span><span id="details-lga" class="detail-value"></span></div>
                             </div>
@@ -390,12 +395,11 @@
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
                     <h2 class="text-2xl font-bold">Log Verification</h2>
                     <p class="text-gray-300">Take a quick snapshot of yourself to confirm you are starting this log. This is stored with the log.</p>
-                    <!-- Real Video Feed -->
                     <div class="w-full h-48 mx-auto bg-gray-900 rounded-lg overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
                         <video id="start-video-feed" autoplay muted playsinline class="w-full h-full object-cover"></video>
                         <i id="start-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
                     </div>
-                    <canvas id="start-snapshot-canvas" class="hidden"></canvas> <!-- For capturing the frame -->
+                    <canvas id="start-snapshot-canvas" class="hidden"></canvas>
                     
                     <p id="start-verify-status" class="text-lg text-cyan-400">Please enable your camera</p>
                     
@@ -424,9 +428,8 @@
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
                     <h2 class="text-2xl font-bold">Liveness Verification</h2>
                     <p class="text-gray-300">To end the timer, please look at the camera. We need to verify you are a live person.</p>
-                    <!-- Real Video Feed -->
                     <div class="w-48 h-48 mx-auto bg-gray-900 rounded-full overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
-                        <video id="end-video-feed" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                        <video id="end-video-feed" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video> <!-- Mirrored for user comfort -->
                         <i id="end-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
                     </div>
                     
@@ -462,7 +465,7 @@
                                 <i class="ph ph-upload-simple"></i> Choose File
                             </label>
                             <input type="file" id="update-photo" class="hidden" accept="image/*">
-                            <span id="update-photo-filename" class_="file-input-filename">No file chosen</span>
+                            <span id="update-photo-filename" class="file-input-filename">No file chosen</span>
                         </div>
                     </div>
                     <div class="space-y-3">
@@ -491,7 +494,7 @@
                 );
             });
             document.querySelectorAll('select.form-input').forEach(el => {
-                el.classList.add('text-black'); // Make select text readable
+                el.classList.add('text-black'); 
             });
             document.querySelectorAll('.detail-item').forEach(el => el.classList.add('flex', 'flex-col'));
             document.querySelectorAll('.detail-label').forEach(el => el.classList.add('block', 'text-sm', 'text-gray-300', 'font-medium'));
@@ -503,6 +506,7 @@
             const DURATION = 48 * 60 * 60 * 1000;
             let nigeriaData = [];
             let faceApiLoaded = false;
+            let modelsLoading = false; // Prevent race conditions
             let startVideoStream = null;
             let endVideoStream = null;
 
@@ -513,6 +517,11 @@
             const activeMeetupScreen = document.getElementById('screen-active-meetup');
             const successScreen = document.getElementById('screen-success');
             const trustScreen = document.getElementById('screen-trust');
+            
+            // Global Error Bar
+            const errorBar = document.getElementById('global-error-bar');
+            const errorText = document.getElementById('global-error-text');
+            const errorClose = document.getElementById('global-error-close');
             
             // Modals
             const verifyModal = document.getElementById('modal-verify');
@@ -582,9 +591,22 @@
                 updatePhotoFilename.textContent = updatePhotoInput.files.length > 0 ? updatePhotoInput.files[0].name : 'No file chosen';
             });
 
+            // --- UI & ERROR HANDLING ---
+            function showGlobalError(message) {
+                errorText.textContent = message;
+                errorBar.classList.remove('hidden');
+                errorBar.style.transform = 'translateY(0%)';
+                setTimeout(hideGlobalError, 5000); // Auto-hide after 5 seconds
+            }
+
+            function hideGlobalError() {
+                errorBar.style.transform = 'translateY(-100%)';
+                setTimeout(() => errorBar.classList.add('hidden'), 300);
+            }
+
             // --- NAVIGATION ---
             function showScreen(screenElement) {
-                stopAllCameras(); // Stop cameras when changing screens
+                stopAllCameras(); 
                 screens.forEach(s => s.style.display = 'none');
                 if (screenElement) {
                     screenElement.style.display = 'flex';
@@ -597,24 +619,32 @@
             }
             
             function hideModal(modalElement) {
-                stopAllCameras(); // Stop cameras when hiding modal
+                stopAllCameras(); 
                 modalElement.classList.add('hidden');
                 modalElement.classList.remove('flex');
             }
 
             // --- CAMERA & VERIFICATION ---
             async function loadFaceApiModels() {
-                // This function loads the AI models needed for face detection
-                // It's called once when the app loads
+                if (faceApiLoaded || modelsLoading) return; // Already loaded or loading
+                modelsLoading = true;
+                
                 try {
+                    if (typeof faceapi === 'undefined') {
+                        throw new Error("face-api.js script failed to load.");
+                    }
+                    
                     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
                     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
                     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
                     faceApiLoaded = true;
+                    modelsLoading = false;
                     console.log("FaceAPI models loaded.");
                 } catch (err) {
+                    modelsLoading = false;
                     console.error("Failed to load FaceAPI models:", err);
-                    alert("Failed to load facial recognition models. Liveness check will be simulated.");
+                    // This is the user-facing error message, replacing the alert
+                    showGlobalError("Failed to load facial models. Verification will be simulated.");
                 }
             }
             
@@ -626,6 +656,7 @@
                 const actionBtn = (type === 'start') ? btnDoStartVerify : btnDoVerify;
 
                 statusEl.textContent = 'Requesting camera access...';
+                statusEl.classList.remove('text-cyan-400', 'text-red-400');
                 statusEl.classList.add('text-yellow-400');
                 
                 try {
@@ -648,7 +679,7 @@
 
                 } catch (err) {
                     console.error("Camera access failed:", err);
-                    statusEl.textContent = "Camera access failed. Please check permissions. This feature may be blocked in this environment.";
+                    statusEl.textContent = "Camera access failed. Please check permissions.";
                     statusEl.classList.remove('text-yellow-400');
                     statusEl.classList.add('text-red-400');
                 }
@@ -663,18 +694,23 @@
                 startVideoStream = null;
                 endVideoStream = null;
                 
-                // Reset video elements
                 [startVideo, endVideo].forEach(v => {
                     if (v) v.srcObject = null;
                 });
                 [startVideoIcon, endVideoIcon].forEach(i => {
                     if (i) i.style.display = 'block';
                 });
-                // Reset buttons
+                
                 btnEnableStartCamera.classList.remove('hidden');
                 btnDoStartVerify.classList.add('hidden');
                 btnEnableEndCamera.classList.remove('hidden');
                 btnDoVerify.classList.add('hidden');
+
+                // Reset status texts
+                startVerifyStatus.textContent = "Please enable your camera";
+                startVerifyStatus.className = 'text-lg text-cyan-400';
+                verifyStatus.textContent = "Please enable your camera";
+                verifyStatus.className = 'text-lg text-cyan-400';
             }
             
             // --- DATA & FORM LOGIC ---
@@ -684,7 +720,6 @@
                     if (!response.ok) throw new Error('Network response was not ok');
                     nigeriaData = await response.json();
                     
-                    // Populate states
                     stateSelect.innerHTML = '<option value="" disabled selected>Select a state...</option>';
                     nigeriaData.forEach(state => {
                         const option = document.createElement('option');
@@ -695,6 +730,7 @@
                 } catch (err) {
                     console.error("Failed to load Nigeria data:", err);
                     stateSelect.innerHTML = '<option value="" disabled selected>Failed to load states</option>';
+                    showGlobalError("Failed to load location data.");
                 }
             }
             
@@ -722,14 +758,13 @@
                 newRow.className = 'phone-input-row';
                 
                 const newInp = document.createElement('input');
-                newInp.type = 'text';
+                newInp.type = 'tel';
                 newInp.className = 'form-input phone-input';
                 newInp.pattern = '[0-9]{11}';
                 newInp.title = 'Phone number must be exactly 11 digits.';
                 newInp.maxLength = 11;
                 newInp.placeholder = '08012345678';
                 
-                // Need to re-apply Tailwind classes dynamically
                 ['mt-1', 'block', 'w-full', 'bg-white/20', 'backdrop-blur-sm', 
                  'border-0', 'rounded-lg', 'py-3', 'px-4', 'text-white', 
                  'placeholder-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-white', 'text-black'].forEach(c => newInp.classList.add(c));
@@ -761,8 +796,8 @@
                     supportImagesFilename.textContent = 'No files chosen';
                     lgaSelect.innerHTML = '<option value="" disabled selected>Select state first</option>';
                     lgaSelect.disabled = true;
-                    // Remove extra phone inputs
                     document.querySelectorAll('#phone-numbers-container .phone-input-row:not(:first-child)').forEach(row => row.remove());
+                    document.querySelectorAll('.phone-input').forEach(inp => inp.classList.remove('input-error'));
                 }
             }
 
@@ -789,14 +824,36 @@
                 }, 1000);
             }
 
-            function handleSubmitLogForm(e) {
+            async function handleSubmitLogForm(e) {
                 e.preventDefault();
+                hideGlobalError(); // Clear previous errors
                 
-                // Collect phone numbers
+                // --- Phone Validation ---
                 const phoneInputs = document.querySelectorAll('.phone-input');
-                const phones = Array.from(phoneInputs)
-                                  .map(input => input.value)
-                                  .filter(phone => phone.trim() !== ''); // Filter out empty strings
+                const phones = [];
+                let phoneError = false;
+                phoneInputs.forEach(input => {
+                    const phone = input.value;
+                    if (phone.trim() !== '') {
+                        if (!/^[0-9]{11}$/.test(phone)) {
+                            phoneError = true;
+                            input.classList.add('input-error');
+                        } else {
+                            input.classList.remove('input-error');
+                            phones.push(phone);
+                        }
+                    } else {
+                         input.classList.remove('input-error');
+                    }
+                });
+
+                if (phoneError) {
+                    showGlobalError("All phone numbers must be exactly 11 digits.");
+                    return; // Stop form submission
+                }
+                
+                // --- Lazy load models ---
+                await loadFaceApiModels(); 
                 
                 activeMeetup = {
                     firstName: document.getElementById('meetup-first-name').value,
@@ -816,7 +873,6 @@
                     progressUpdates: []
                 };
                 showModal(startVerifyModal);
-                // Note: We don't enable the camera yet. The user does that.
             }
 
             function confirmStartMeetup() {
@@ -825,30 +881,22 @@
                 startVerifyStatus.classList.add('text-yellow-400');
                 btnDoStartVerify.disabled = true;
                 
-                // --- Real Snapshot Logic ---
                 try {
                     const context = startSnapshotCanvas.getContext('2d');
                     startSnapshotCanvas.width = startVideo.videoWidth;
                     startSnapshotCanvas.height = startVideo.videoHeight;
                     context.drawImage(startVideo, 0, 0, startSnapshotCanvas.width, startSnapshotCanvas.height);
-                    
-                    // In a real app, you'd now upload this data:
-                    // const imageDataUrl = startSnapshotCanvas.toDataURL('image/jpeg');
-                    // await uploadImage(imageDataUrl);
                     console.log("Snapshot taken!");
-                    
                 } catch (err) {
                     console.error("Failed to take snapshot:", err);
-                    // Continue anyway for the demo
+                    showGlobalError("Failed to capture snapshot. Continuing anyway.");
                 }
-                // --- End Real Snapshot Logic ---
 
                 setTimeout(() => {
                     startVerifyStatus.textContent = "Snapshot Saved! Starting timer...";
                     startVerifyStatus.classList.add('text-green-400');
 
                     setTimeout(() => {
-                        // Populate active screen details
                         document.getElementById('details-firstName').textContent = activeMeetup.firstName;
                         document.getElementById('details-lastName').textContent = activeMeetup.lastName;
                         document.getElementById('details-nickname').textContent = activeMeetup.nickname;
@@ -868,22 +916,19 @@
                         
                         startTimer();
                         updateHomeScreen();
-                        hideModal(startVerifyModal); // This will also stop the camera
+                        hideModal(startVerifyModal);
                         showScreen(activeMeetupScreen);
                         
-                        startVerifyStatus.textContent = "Please enable your camera";
-                        startVerifyStatus.classList.remove('text-green-400', 'text-yellow-400');
-                        startVerifyStatus.classList.add('text-cyan-400');
                         btnDoStartVerify.disabled = false;
                         renderProgressUpdates();
 
                     }, 1000);
-                }, 500); // Short delay for snapshot
+                }, 500); 
             }
             
             async function performLivenessCheck() {
                 verifyStatus.textContent = "Detecting face...";
-                verifyStatus.classList.remove('text-cyan-400');
+                verifyStatus.classList.remove('text-cyan-400', 'text-red-400');
                 verifyStatus.classList.add('text-yellow-400');
                 btnDoVerify.disabled = true;
 
@@ -893,22 +938,19 @@
                     return;
                 }
                 
-                // --- This is the REAL face-api.js logic ---
                 try {
                     const detection = await faceapi.detectSingleFace(endVideo, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
                     
                     if (detection) {
                         verifyStatus.textContent = "Face detected. Please blink.";
-                        // In a real app, you'd run this in a loop (setInterval)
-                        // and check if the eye aspect ratio (EAR) changes significantly.
-                        // For this demo, we'll just simulate a successful "blink".
                         
+                        // This is a simple simulation of a blink check.
                         setTimeout(() => {
                             verifyStatus.textContent = "Liveness Confirmed!";
                             verifyStatus.classList.remove('text-yellow-400');
                             verifyStatus.classList.add('text-green-400');
                             setTimeout(endMeetup, 1500); // Proceed to end meetup
-                        }, 2500); // Simulate 2.5s for "blink"
+                        }, 2500); 
                         
                     } else {
                         verifyStatus.textContent = "No face detected. Please try again.";
@@ -924,17 +966,13 @@
             }
 
             function endMeetup() {
-                // This function is now called *after* verification is successful
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = null;
                 activeMeetup = null;
                 
-                hideModal(verifyModal); // This will also stop the camera
+                hideModal(verifyModal); 
                 showScreen(successScreen); 
                 
-                verifyStatus.textContent = "Please enable your camera";
-                verifyStatus.classList.remove('text-green-400', 'text-yellow-400', 'text-red-400');
-                verifyStatus.classList.add('text-cyan-400');
                 btnDoVerify.disabled = false;
                 
                 updateHomeScreen();
@@ -991,6 +1029,7 @@
             btnBackHomeFromTrust.addEventListener('click', () => showScreen(homeScreen));
             stateSelect.addEventListener('change', populateLGAs);
             btnAddPhone.addEventListener('click', addPhoneInput);
+            errorClose.addEventListener('click', hideGlobalError);
             
             activeMeetupCardHome.addEventListener('click', () => {
                 if (activeMeetup) showScreen(activeMeetupScreen);
@@ -998,18 +1037,18 @@
 
             logMeetupForm.addEventListener('submit', handleSubmitLogForm);
             
-            // Start Verify Listeners
             btnEnableStartCamera.addEventListener('click', () => startVerificationCamera('start'));
             btnDoStartVerify.addEventListener('click', confirmStartMeetup);
             btnCancelStartVerify.addEventListener('click', () => hideModal(startVerifyModal));
             
-            // End Verify Listeners
-            btnShowVerify.addEventListener('click', () => showModal(verifyModal));
+            btnShowVerify.addEventListener('click', async () => {
+                await loadFaceApiModels(); // Lazy load models
+                showModal(verifyModal);
+            });
             btnEnableEndCamera.addEventListener('click', () => startVerificationCamera('end'));
-            btnDoVerify.addEventListener('click', performLivenessCheck); // Changed from endMeetup
+            btnDoVerify.addEventListener('click', performLivenessCheck);
             btnCancelVerify.addEventListener('click', () => hideModal(verifyModal));
 
-            // Add Update Listeners
             btnShowAddUpdate.addEventListener('click', () => showModal(addUpdateModal));
             btnCancelUpdate.addEventListener('click', () => {
                 hideModal(addUpdateModal);
@@ -1020,8 +1059,7 @@
             btnSubmitUpdate.addEventListener('click', addProgressUpdate);
 
             // --- INITIALIZATION ---
-            loadFaceApiModels();
-            loadNigeriaData();
+            loadNigeriaData(); // Load state/LGA data on startup
             updateHomeScreen();
             showScreen(homeScreen); 
         });
