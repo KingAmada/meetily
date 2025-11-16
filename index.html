@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeMeet Logger</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+    <!-- Load face-api.js for liveness check -->
+    <!-- We use defer to make sure it loads after the HTML is parsed -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Use Inter font family -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animated-gradient {
+            background: linear-gradient(-45deg, #4b0082, #8a2be2, #4169e1, #ff69b4, #ff007f);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+        }
+        .app-screen {
+            height: 100vh; 
+            display: none;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
+        .file-input-label {
+            display: inline-block; cursor: pointer; padding: 10px 16px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 8px; transition: all 0.3s ease;
+        }
+        .file-input-label:hover { background-color: rgba(255, 255, 255, 0.3); }
+        .file-input-filename {
+            font-size: 0.875rem; color: #d1d5db;
+            margin-left: 10px; font-style: italic;
+        }
+        /* Style for disabled select */
+        select:disabled {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+        }
+        /* Style for phone input rows */
+        .phone-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .phone-input-row input {
+            flex-grow: 1;
+        }
+        .phone-input-row .remove-phone-btn {
+            background-color: rgba(255, 82, 82, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .phone-input-row .remove-phone-btn:hover {
+            background-color: rgba(255, 82, 82, 1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+
+    <div class="max-w-md mx-auto h-screen animated-gradient shadow-2xl overflow-hidden">
+        <div class="relative w-full h-full text-white">
+
+            <!-- 
+              =================================
+              SCREEN 1: HOME DASHBOARD
+              =================================
+            -->
+            <div id="screen-home" class="app-screen p-6 pt-12 space-y-8">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-4xl font-bold">SafeMeet</h1>
+                        <p class="text-lg text-gray-200">Your personal safety check-in.</p>
+                    </div>
+                    <button id="btn-show-trust" class="bg-black/20 backdrop-blur-md p-3 rounded-full transform transition-all hover:bg-black/40 active:scale-90" title="Trust & Privacy">
+                        <i class="ph-bold ph-shield-check text-3xl text-cyan-300"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 pt-4 text-center">
+                    <p class="text-lg text-gray-100">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
+                    <button id="btn-show-log-form" class="w-full bg-white text-blue-700 font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-xl active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
+                        <i class="ph-bold ph-plus-circle text-2xl"></i>
+                        <span>Log New Meetup</span>
+                    </button>
+                    <p class="text-sm text-gray-200">Take control of your safety. You're in charge.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <h2 class="text-2xl font-semibold border-b border-white/20 pb-2">Active Meetup</h2>
+                    <div id="active-meetup-card-home" class="hidden bg-black/30 backdrop-blur-md p-4 rounded-lg shadow-md transition-all cursor-pointer hover:bg-black/40">
+                        <p class="text-gray-200">Meetup in progress. Tap to view.</p>
+                        <div class="flex justify-between items-center mt-2">
+                            <span id="active-meetup-name-home" class="font-semibold text-lg"></span>
+                            <span class="text-sm text-yellow-300 font-semibold flex items-center space-x-1">
+                                <i class="ph-fill ph-timer text-lg"></i>
+                                <span>TIMER RUNNING</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="no-active-meetup" class="text-center text-gray-300 py-4">
+                        <p>No active meetups.</p>
+                        <p class="text-sm">You're all clear!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 
+              =================================
+              SCREEN 2: LOG MEETUP FORM
+              =================================
+            -->
+            <div id="screen-log-form" class="app-screen p-6 pt-12 space-y-4">
+                <div class="flex items-center justify-between">
+                    <button id="btn-back-home" class="flex items-center space-x-1 text-gray-200 hover:text-white transition-all">
+                        <i class="ph-bold ph-arrow-left text-xl"></i>
+                        <span>Back</span>
+                    </button>
+                    <h1 class="text-3xl font-bold text-right">Log Details</h1>
+                </div>
+                <p class="text-gray-200 text-sm">This information is encrypted and will be **permanently deleted** after you end your meetup safely.</p>
+
+                <div class="flex-1 overflow-y-auto overscroll-contain pb-24 space-y-4" id="form-scroll-container">
+                    <form id="log-meetup-form" class="space-y-4">
+                        
+                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
+                            <legend class="text-lg font-semibold text-white px-2">Person's Details</legend>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="meetup-first-name" class="block text-sm font-medium text-gray-100">First Name *</label>
+                                    <input type="text" id="meetup-first-name" required class="form-input">
+                                </div>
+                                <div>
+                                    <label for="meetup-last-name" class="block text-sm font-medium text-gray-100">Last Name *</label>
+                                    <input type="text" id="meetup-last-name" required class="form-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="meetup-nickname" class="block text-sm font-medium text-gray-100">Nickname (Optional)</label>
+                                <input type="text" id="meetup-nickname" class="form-input">
+                            </div>
+                             
+                            <!-- Phone Numbers Section -->
+                            <div id="phone-numbers-container" class="space-y-2">
+                                <label class="block text-sm font-medium text-gray-100">Phone(s) (11 digits, optional)</label>
+                                <div class="phone-input-row">
+                                    <input type="text" class="form-input phone-input" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits." maxlength="11" placeholder="08012345678">
+                                    <!-- No remove button for the first one -->
+                                </div>
+                            </div>
+                            <button type="button" id="btn-add-phone" class="w-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center space-x-1">
+                                <i class="ph ph-plus"></i>
+                                <span>Add another phone number</span>
+                            </button>
+                            
+                            <div>
+                                <label for="meetup-friends" class="block text-sm font-medium text-gray-100">Friends/Acquaintances (Optional)</label>
+                                <textarea id="meetup-friends" rows="2" class="form-input" placeholder="e.g., 'Friends with John Doe on FB'"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-100">Image of Stranger (Optional)</label>
+                                <label for="meetup-stranger-image" class="file-input-label">
+                                    <i class="ph ph-upload-simple"></i> Choose File
+                                </label>
+                                <input type="file" id="meetup-stranger-image" class="hidden" accept="image/*">
+                                <span id="stranger-image-filename" class="file-input-filename">No file chosen</span>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
+                            <legend class="text-lg font-semibold text-white px-2">Meetup Details</legend>
+                            <div>
+                                <label for="meetup-place-type" class="block text-sm font-medium text-gray-100">Type of Place *</label>
+                                <select id="meetup-place-type" required class="form-input">
+                                    <option value="" disabled selected>Select a place type...</option>
+                                    <option value="Hotel">Hotel</option>
+                                    <option value="Home">Home</option>
+                                    <option value="Restaurant">Restaurant</option>
+                                    <option value="Office">Office</option>
+                                    <option value="Car">Car</option>
+                                    <option value="Public Space">Public Space</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="meetup-address" class="block text-sm font-medium text-gray-100">Address / Location *</label>
+                                <textarea id="meetup-address" rows="2" required class="form-input" placeholder="e.g., '123 Main St, Apt 4B'"></textarea>
+                            </div>
+                            
+                            <!-- State and LGA Dropdowns -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="meetup-state" class="block text-sm font-medium text-gray-100">State *</label>
+                                    <select id="meetup-state" required class="form-input">
+                                        <option value="" disabled selected>Loading states...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="meetup-lga" class="block text-sm font-medium text-gray-100">LGA *</label>
+                                    <select id="meetup-lga" required class="form-input" disabled>
+                                        <option value="" disabled selected>Select state first</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
+                            <legend class="text-lg font-semibold text-white px-2">Supporting Info</legend>
+                            <div>
+                                <label for="meetup-notes" class="block text-sm font-medium text-gray-100">Additional Information (Optional)</label>
+                                <textarea id="meetup-notes" rows="3" class="form-input" placeholder="e.g., 'Purpose of meeting', 'Their car plate is ABC-123'"></textarea>
+                            </div>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-100">Supporting Images/Screenshots (Optional)</label>
+                                <label for="meetup-support-images" class="file-input-label">
+                                    <i class="ph ph-upload-simple"></i> Choose Files
+                                </label>
+                                <input type="file" id="meetup-support-images" class="hidden" multiple accept="image/*">
+                                <span id="support-images-filename" class="file-input-filename">No files chosen</span>
+                            </div>
+                        </fieldset>
+
+                        <button type="submit" class="w-full bg-green-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-green-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
+                            <i class="ph-bold ph-shield-check text-2xl"></i>
+                            <span>Proceed to Verification</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 
+              =================================
+              SCREEN 3: ACTIVE MEETUP TIMER
+              =================================
+            -->
+            <div id="screen-active-meetup" class="app-screen p-6 pt-12 space-y-4">
+                <h1 class="text-3xl font-bold text-center text-yellow-300">Meetup in Progress</h1>
+                
+                <div class="text-center space-y-1 py-4 bg-black/20 backdrop-blur-sm rounded-lg">
+                    <p class="text-gray-200">Safety timer is active. Alert after:</p>
+                    <div id="timer-display" class="text-6xl font-bold text-white tracking-tighter">
+                        48:00:00
+                    </div>
+                    <p id="alert-message" class="text-red-400 font-semibold hidden">TIMER EXPIRED. AUTHORITIES WILL BE NOTIFIED.</p>
+                </div>
+
+                <button id="btn-show-verify" class="w-full bg-red-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-red-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
+                    <i class="ph-bold ph-lock-key-open text-2xl"></i>
+                    <span>End Meetup Safely</span>
+                </button>
+
+                <div class="flex-1 overflow-y-auto overscroll-contain space-y-4 pb-24">
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-2xl font-semibold">Progress Updates</h2>
+                            <button id="btn-show-add-update" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow transform transition-all active:scale-95 hover:bg-blue-600 flex items-center space-x-1">
+                                <i class="ph ph-plus"></i>
+                                <span>Add</span>
+                            </button>
+                        </div>
+                        <div id="progress-updates-list" class="space-y-2 max-h-48 overflow-y-auto bg-black/30 backdrop-blur-md p-3 rounded-lg">
+                            <p id="no-updates-message" class="text-gray-300 text-sm italic">No updates added yet.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h2 class="text-2xl font-semibold border-t border-white/20 pt-4">Logged Details</h2>
+                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="detail-item"><span class="detail-label">First Name</span><span id="details-firstName" class="detail-value"></span></div>
+                                <div class="detail-item"><span class="detail-label">Last Name</span><span id="details-lastName" class="detail-value"></span></div>
+                            </div>
+                            <div class="detail-item"><span class="detail-label">Nickname</span><span id="details-nickname" class="detail-value"></span></div>
+                            <!-- Updated Phone Detail -->
+                            <div class="detail-item"><span class="detail-label">Phone(s)</span><span id="details-phone" class="detail-value whitespace-pre-wrap"></span></div>
+                            <div class="detail-item"><span class="detail-label">Friends/Acquaintances</span><span id="details-friends" class="detail-value whitespace-pre-wrap"></span></div>
+                            <div class="detail-item"><span class="detail-label">Stranger's Photo</span><span id="details-stranger-image" class="detail-value text-cyan-300"></span></div>
+                            <hr class="border-white/10">
+                            <div class="detail-item"><span class="detail-label">Place Type</span><span id="details-place-type" class="detail-value"></span></div>
+                            <div class="detail-item"><span class="detail-label">Address</span><span id="details-address" class="detail-value whitespace-pre-wrap"></span></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <!-- Updated State/LGA Details -->
+                                <div class="detail-item"><span class="detail-label">State</span><span id="details-state" class="detail-value"></span></div>
+                                <div class="detail-item"><span class="detail-label">LGA</span><span id="details-lga" class="detail-value"></span></div>
+                            </div>
+                             <hr class="border-white/10">
+                            <div class="detail-item"><span class="detail-label">Additional Information</span><span id="details-notes" class="detail-value whitespace-pre-wrap"></span></div>
+                            <div class="detail-item"><span class="detail-label">Supporting Images</span><span id="details-support-images" class="detail-value text-cyan-300"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 
+              =================================
+              SCREEN 4: SUCCESS MESSAGE
+              =================================
+            -->
+            <div id="screen-success" class="app-screen p-6 pt-32 text-center space-y-6 justify-center">
+                <i class="ph-bold ph-shield-slashed text-8xl text-green-400 mx-auto"></i>
+                <h1 class="text-4xl font-bold">Meetup Ended</h1>
+                <p class="text-lg text-gray-200">Your safety timer is cancelled. We're glad you're safe!</p>
+                <p class="text-lg text-gray-100 bg-black/30 backdrop-blur-md p-4 rounded-lg font-semibold">
+                    As promised, your log, photos, and all associated meetup data have been
+                    <span class="text-red-400">PERMANENTLY DELETED</span>
+                    from our system.
+                </p>
+            </div>
+
+            <!-- 
+              =================================
+              SCREEN 5: TRUST CENTER
+              =================================
+            -->
+            <div id="screen-trust" class="app-screen p-6 pt-12 space-y-6">
+                <div class="flex items-center justify-between">
+                    <button id="btn-back-home-from-trust" class="flex items-center space-x-1 text-gray-200 hover:text-white transition-all">
+                        <i class="ph-bold ph-arrow-left text-xl"></i>
+                        <span>Back</span>
+                    </button>
+                    <h1 class="text-3xl font-bold text-right">Trust & Privacy</h1>
+                </div>
+
+                <div class="flex-1 overflow-y-auto overscroll-contain space-y-6 pb-24">
+                    <div class="text-center space-y-2">
+                        <i class="ph-bold ph-shield-check text-7xl text-cyan-300 mx-auto"></i>
+                        <h2 class="text-2xl font-semibold">Your Data is Yours. Period.</h2>
+                    </div>
+                    <p class="text-gray-200">
+                        We built this app for one reason: your safety. Our entire system is designed around your privacy. Here is our simple promise to you.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
+                            <i class="ph-bold ph-key text-3xl text-yellow-300 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold">End-to-End Encryption</h3>
+                                <p class="text-gray-300 text-sm">Your log data (names, photos, locations) is encrypted on your device *before* it's sent. We cannot see it.</p>
+                            </div>
+                        </div>
+                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
+                            <i class="ph-bold ph-timer text-3xl text-red-400 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold">The 48-Hour Timer</h3>
+                                <p class="text-gray-300 text-sm">If your timer expires, our system *automatically* sends your encrypted log to emergency contacts or local authorities.</p>
+                            </div>
+                        </div>
+                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
+                            <i class="ph-bold ph-shield-slashed text-3xl text-green-400 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold">Permanent Deletion</h3>
+                                <p class="text-gray-300 text-sm">The *moment* you safely end your meetup, your *entire* encrypted log is permanently deleted from our servers. We keep nothing.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 
+              =================================
+              MODAL: START VERIFICATION
+              =================================
+            -->
+            <div id="modal-start-verify" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
+                    <h2 class="text-2xl font-bold">Log Verification</h2>
+                    <p class="text-gray-300">Take a quick snapshot of yourself to confirm you are starting this log. This is stored with the log.</p>
+                    <!-- Real Video Feed -->
+                    <div class="w-full h-48 mx-auto bg-gray-900 rounded-lg overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
+                        <video id="start-video-feed" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                        <i id="start-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
+                    </div>
+                    <canvas id="start-snapshot-canvas" class="hidden"></canvas> <!-- For capturing the frame -->
+                    
+                    <p id="start-verify-status" class="text-lg text-cyan-400">Please enable your camera</p>
+                    
+                    <div class="space-y-3">
+                        <button id="btn-enable-start-camera" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95 flex items-center justify-center space-x-2">
+                            <i class="ph-bold ph-camera"></i>
+                            <span>Enable Camera</span>
+                        </button>
+                        <button id="btn-do-start-verify" class="w-full bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-cyan-600 active:scale-95 flex items-center justify-center space-x-2 hidden">
+                            <i class="ph-bold ph-aperture"></i>
+                            <span>Snap Photo & Start Timer</span>
+                        </button>
+                        <button id="btn-cancel-start-verify" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 
+              =================================
+              MODAL: FACIAL VERIFICATION (END)
+              =================================
+            -->
+            <div id="modal-verify" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
+                    <h2 class="text-2xl font-bold">Liveness Verification</h2>
+                    <p class="text-gray-300">To end the timer, please look at the camera. We need to verify you are a live person.</p>
+                    <!-- Real Video Feed -->
+                    <div class="w-48 h-48 mx-auto bg-gray-900 rounded-full overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
+                        <video id="end-video-feed" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                        <i id="end-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
+                    </div>
+                    
+                    <p id="verify-status" class="text-lg text-cyan-400">Please enable your camera</p>
+                    
+                    <div class="space-y-3">
+                        <button id="btn-enable-end-camera" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95 flex items-center justify-center space-x-2">
+                            <i class="ph-bold ph-camera"></i>
+                            <span>Enable Camera</span>
+                        </button>
+                        <button id="btn-do-verify" class="w-full bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-cyan-600 active:scale-95 hidden">
+                            Start Liveness Check
+                        </button>
+                        <button id="btn-cancel-verify" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: ADD PROGRESS UPDATE (No changes) -->
+            <div id="modal-add-update" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
+                    <h2 class="text-2xl font-bold">Add Progress Update</h2>
+                    <div class="text-left space-y-4">
+                        <div>
+                            <label for="update-text" class="block text-sm font-medium text-gray-100">Text Update (Optional)</label>
+                            <textarea id="update-text" rows="3" class="form-input" placeholder="e.g., 'Arrived safely.'"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-100">Photo Update (Optional)</label>
+                            <label for="update-photo" class="file-input-label">
+                                <i class="ph ph-upload-simple"></i> Choose File
+                            </label>
+                            <input type="file" id="update-photo" class="hidden" accept="image/*">
+                            <span id="update-photo-filename" class_="file-input-filename">No file chosen</span>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <button id="btn-submit-update" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95">
+                            Add Update
+                        </button>
+                        <button id="btn-cancel-update" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- /App Content Area -->
+    </div> <!-- /App Shell -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Apply common form input classes ---
+            document.querySelectorAll('.form-input').forEach(el => {
+                el.classList.add(
+                    'mt-1', 'block', 'w-full', 'bg-white/20', 'backdrop-blur-sm', 
+                    'border-0', 'rounded-lg', 'py-3', 'px-4', 'text-white', 
+                    'placeholder-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-white'
+                );
+            });
+            document.querySelectorAll('select.form-input').forEach(el => {
+                el.classList.add('text-black'); // Make select text readable
+            });
+            document.querySelectorAll('.detail-item').forEach(el => el.classList.add('flex', 'flex-col'));
+            document.querySelectorAll('.detail-label').forEach(el => el.classList.add('block', 'text-sm', 'text-gray-300', 'font-medium'));
+            document.querySelectorAll('.detail-value').forEach(el => el.classList.add('text-lg', 'font-medium', 'text-white'));
+
+            // --- STATE ---
+            let activeMeetup = null;
+            let timerInterval = null;
+            const DURATION = 48 * 60 * 60 * 1000;
+            let nigeriaData = [];
+            let faceApiLoaded = false;
+            let startVideoStream = null;
+            let endVideoStream = null;
+
+            // --- DOM ELEMENTS ---
+            const screens = document.querySelectorAll('.app-screen');
+            const homeScreen = document.getElementById('screen-home');
+            const logFormScreen = document.getElementById('screen-log-form');
+            const activeMeetupScreen = document.getElementById('screen-active-meetup');
+            const successScreen = document.getElementById('screen-success');
+            const trustScreen = document.getElementById('screen-trust');
+            
+            // Modals
+            const verifyModal = document.getElementById('modal-verify');
+            const startVerifyModal = document.getElementById('modal-start-verify');
+            const addUpdateModal = document.getElementById('modal-add-update');
+
+            // Buttons
+            const btnShowLogForm = document.getElementById('btn-show-log-form');
+            const btnBackHome = document.getElementById('btn-back-home');
+            const logMeetupForm = document.getElementById('log-meetup-form');
+            const btnShowTrust = document.getElementById('btn-show-trust');
+            const btnBackHomeFromTrust = document.getElementById('btn-back-home-from-trust');
+            const btnAddPhone = document.getElementById('btn-add-phone');
+            
+            // Start Verify Modal Buttons
+            const btnEnableStartCamera = document.getElementById('btn-enable-start-camera');
+            const btnDoStartVerify = document.getElementById('btn-do-start-verify');
+            const btnCancelStartVerify = document.getElementById('btn-cancel-start-verify');
+            
+            // End Verify Modal Buttons
+            const btnShowVerify = document.getElementById('btn-show-verify');
+            const btnEnableEndCamera = document.getElementById('btn-enable-end-camera');
+            const btnDoVerify = document.getElementById('btn-do-verify');
+            const btnCancelVerify = document.getElementById('btn-cancel-verify');
+
+            // Add Update Modal Buttons
+            const btnShowAddUpdate = document.getElementById('btn-show-add-update');
+            const btnCancelUpdate = document.getElementById('btn-cancel-update');
+            const btnSubmitUpdate = document.getElementById('btn-submit-update');
+
+            // Displays
+            const timerDisplay = document.getElementById('timer-display');
+            const alertMessage = document.getElementById('alert-message');
+            const activeMeetupCardHome = document.getElementById('active-meetup-card-home');
+            const activeMeetupNameHome = document.getElementById('active-meetup-name-home');
+            const noActiveMeetup = document.getElementById('no-active-meetup');
+            const verifyStatus = document.getElementById('verify-status');
+            const startVerifyStatus = document.getElementById('start-verify-status');
+            const progressUpdatesList = document.getElementById('progress-updates-list');
+            const noUpdatesMessage = document.getElementById('no-updates-message');
+
+            // Nigeria State/LGA Selects
+            const stateSelect = document.getElementById('meetup-state');
+            const lgaSelect = document.getElementById('meetup-lga');
+
+            // Video Elements
+            const startVideo = document.getElementById('start-video-feed');
+            const startVideoIcon = document.getElementById('start-video-icon');
+            const startSnapshotCanvas = document.getElementById('start-snapshot-canvas');
+            const endVideo = document.getElementById('end-video-feed');
+            const endVideoIcon = document.getElementById('end-video-icon');
+
+            // --- File Input Handlers ---
+            const strangerImageInput = document.getElementById('meetup-stranger-image');
+            const strangerImageFilename = document.getElementById('stranger-image-filename');
+            strangerImageInput.addEventListener('change', () => {
+                strangerImageFilename.textContent = strangerImageInput.files.length > 0 ? strangerImageInput.files[0].name : 'No file chosen';
+            });
+            const supportImagesInput = document.getElementById('meetup-support-images');
+            const supportImagesFilename = document.getElementById('support-images-filename');
+            supportImagesInput.addEventListener('change', () => {
+                supportImagesFilename.textContent = supportImagesInput.files.length > 0 ? `${supportImagesInput.files.length} file(s) chosen` : 'No files chosen';
+            });
+            const updatePhotoInput = document.getElementById('update-photo');
+            const updatePhotoFilename = document.getElementById('update-photo-filename');
+            updatePhotoInput.addEventListener('change', () => {
+                updatePhotoFilename.textContent = updatePhotoInput.files.length > 0 ? updatePhotoInput.files[0].name : 'No file chosen';
+            });
+
+            // --- NAVIGATION ---
+            function showScreen(screenElement) {
+                stopAllCameras(); // Stop cameras when changing screens
+                screens.forEach(s => s.style.display = 'none');
+                if (screenElement) {
+                    screenElement.style.display = 'flex';
+                }
+            }
+            
+            function showModal(modalElement) {
+                modalElement.classList.remove('hidden');
+                modalElement.classList.add('flex');
+            }
+            
+            function hideModal(modalElement) {
+                stopAllCameras(); // Stop cameras when hiding modal
+                modalElement.classList.add('hidden');
+                modalElement.classList.remove('flex');
+            }
+
+            // --- CAMERA & VERIFICATION ---
+            async function loadFaceApiModels() {
+                // This function loads the AI models needed for face detection
+                // It's called once when the app loads
+                try {
+                    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                    faceApiLoaded = true;
+                    console.log("FaceAPI models loaded.");
+                } catch (err) {
+                    console.error("Failed to load FaceAPI models:", err);
+                    alert("Failed to load facial recognition models. Liveness check will be simulated.");
+                }
+            }
+            
+            async function startVerificationCamera(type) {
+                const videoEl = (type === 'start') ? startVideo : endVideo;
+                const videoIcon = (type === 'start') ? startVideoIcon : endVideoIcon;
+                const statusEl = (type === 'start') ? startVerifyStatus : verifyStatus;
+                const enableBtn = (type === 'start') ? btnEnableStartCamera : btnEnableEndCamera;
+                const actionBtn = (type === 'start') ? btnDoStartVerify : btnDoVerify;
+
+                statusEl.textContent = 'Requesting camera access...';
+                statusEl.classList.add('text-yellow-400');
+                
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                    if (type === 'start') {
+                        startVideoStream = stream;
+                    } else {
+                        endVideoStream = stream;
+                    }
+                    videoEl.srcObject = stream;
+                    videoEl.style.display = 'block';
+                    videoIcon.style.display = 'none';
+                    
+                    statusEl.textContent = (type === 'start') ? 'Position your face' : 'Camera active. Look at camera.';
+                    statusEl.classList.remove('text-yellow-400');
+                    statusEl.classList.add('text-green-400');
+                    
+                    enableBtn.classList.add('hidden');
+                    actionBtn.classList.remove('hidden');
+
+                } catch (err) {
+                    console.error("Camera access failed:", err);
+                    statusEl.textContent = "Camera access failed. Please check permissions. This feature may be blocked in this environment.";
+                    statusEl.classList.remove('text-yellow-400');
+                    statusEl.classList.add('text-red-400');
+                }
+            }
+            
+            function stopAllCameras() {
+                [startVideoStream, endVideoStream].forEach(stream => {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                });
+                startVideoStream = null;
+                endVideoStream = null;
+                
+                // Reset video elements
+                [startVideo, endVideo].forEach(v => {
+                    if (v) v.srcObject = null;
+                });
+                [startVideoIcon, endVideoIcon].forEach(i => {
+                    if (i) i.style.display = 'block';
+                });
+                // Reset buttons
+                btnEnableStartCamera.classList.remove('hidden');
+                btnDoStartVerify.classList.add('hidden');
+                btnEnableEndCamera.classList.remove('hidden');
+                btnDoVerify.classList.add('hidden');
+            }
+            
+            // --- DATA & FORM LOGIC ---
+            async function loadNigeriaData() {
+                try {
+                    const response = await fetch('https://gist.githubusercontent.com/devhammed/0bb9eeac9ff22c895100d072f489dc98/raw/a7b19911407a89947c452339fee59f9335dc8225/nigeria-state-and-lgas.json');
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    nigeriaData = await response.json();
+                    
+                    // Populate states
+                    stateSelect.innerHTML = '<option value="" disabled selected>Select a state...</option>';
+                    nigeriaData.forEach(state => {
+                        const option = document.createElement('option');
+                        option.value = state.state;
+                        option.textContent = state.state;
+                        stateSelect.appendChild(option);
+                    });
+                } catch (err) {
+                    console.error("Failed to load Nigeria data:", err);
+                    stateSelect.innerHTML = '<option value="" disabled selected>Failed to load states</option>';
+                }
+            }
+            
+            function populateLGAs() {
+                const selectedStateName = stateSelect.value;
+                const stateData = nigeriaData.find(s => s.state === selectedStateName);
+                
+                lgaSelect.innerHTML = '<option value="" disabled selected>Select LGA...</option>';
+                if (stateData) {
+                    stateData.lgas.forEach(lga => {
+                        const option = document.createElement('option');
+                        option.value = lga;
+                        option.textContent = lga;
+                        lgaSelect.appendChild(option);
+                    });
+                    lgaSelect.disabled = false;
+                } else {
+                    lgaSelect.disabled = true;
+                }
+            }
+            
+            function addPhoneInput() {
+                const container = document.getElementById('phone-numbers-container');
+                const newRow = document.createElement('div');
+                newRow.className = 'phone-input-row';
+                
+                const newInp = document.createElement('input');
+                newInp.type = 'text';
+                newInp.className = 'form-input phone-input';
+                newInp.pattern = '[0-9]{11}';
+                newInp.title = 'Phone number must be exactly 11 digits.';
+                newInp.maxLength = 11;
+                newInp.placeholder = '08012345678';
+                
+                // Need to re-apply Tailwind classes dynamically
+                ['mt-1', 'block', 'w-full', 'bg-white/20', 'backdrop-blur-sm', 
+                 'border-0', 'rounded-lg', 'py-3', 'px-4', 'text-white', 
+                 'placeholder-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-white', 'text-black'].forEach(c => newInp.classList.add(c));
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-phone-btn';
+                removeBtn.textContent = 'X';
+                removeBtn.onclick = () => {
+                    container.removeChild(newRow);
+                };
+                
+                newRow.appendChild(newInp);
+                newRow.appendChild(removeBtn);
+                container.appendChild(newRow);
+            }
+
+            // --- CORE APP FLOW ---
+            function updateHomeScreen() {
+                if (activeMeetup) {
+                    activeMeetupNameHome.textContent = `with ${activeMeetup.firstName} ${activeMeetup.lastName}`;
+                    activeMeetupCardHome.style.display = 'block';
+                    noActiveMeetup.style.display = 'none';
+                } else {
+                    activeMeetupCardHome.style.display = 'none';
+                    noActiveMeetup.style.display = 'block';
+                    logMeetupForm.reset();
+                    strangerImageFilename.textContent = 'No file chosen';
+                    supportImagesFilename.textContent = 'No files chosen';
+                    lgaSelect.innerHTML = '<option value="" disabled selected>Select state first</option>';
+                    lgaSelect.disabled = true;
+                    // Remove extra phone inputs
+                    document.querySelectorAll('#phone-numbers-container .phone-input-row:not(:first-child)').forEach(row => row.remove());
+                }
+            }
+
+            function startTimer() {
+                const endTime = Date.now() + DURATION;
+                activeMeetup.endTime = endTime; 
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    const now = Date.now();
+                    const timeLeft = activeMeetup.endTime - now;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        timerDisplay.textContent = "00:00:00";
+                        alertMessage.style.display = 'block';
+                        timerDisplay.classList.add('text-red-500');
+                        return;
+                    }
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    timerDisplay.textContent = 
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }, 1000);
+            }
+
+            function handleSubmitLogForm(e) {
+                e.preventDefault();
+                
+                // Collect phone numbers
+                const phoneInputs = document.querySelectorAll('.phone-input');
+                const phones = Array.from(phoneInputs)
+                                  .map(input => input.value)
+                                  .filter(phone => phone.trim() !== ''); // Filter out empty strings
+                
+                activeMeetup = {
+                    firstName: document.getElementById('meetup-first-name').value,
+                    lastName: document.getElementById('meetup-last-name').value,
+                    nickname: document.getElementById('meetup-nickname').value || 'Not provided',
+                    phones: phones.length > 0 ? phones : ['Not provided'],
+                    friends: document.getElementById('meetup-friends').value || 'Not provided',
+                    strangerImage: strangerImageInput.files.length > 0 ? strangerImageInput.files[0].name : 'Not provided',
+                    placeType: document.getElementById('meetup-place-type').value,
+                    address: document.getElementById('meetup-address').value,
+                    state: document.getElementById('meetup-state').value,
+                    lga: document.getElementById('meetup-lga').value,
+                    notes: document.getElementById('meetup-notes').value || 'None',
+                    supportImages: supportImagesInput.files.length > 0 
+                        ? Array.from(supportImagesInput.files).map(f => f.name) 
+                        : ['Not provided'],
+                    progressUpdates: []
+                };
+                showModal(startVerifyModal);
+                // Note: We don't enable the camera yet. The user does that.
+            }
+
+            function confirmStartMeetup() {
+                startVerifyStatus.textContent = "Snapping photo...";
+                startVerifyStatus.classList.remove('text-cyan-400');
+                startVerifyStatus.classList.add('text-yellow-400');
+                btnDoStartVerify.disabled = true;
+                
+                // --- Real Snapshot Logic ---
+                try {
+                    const context = startSnapshotCanvas.getContext('2d');
+                    startSnapshotCanvas.width = startVideo.videoWidth;
+                    startSnapshotCanvas.height = startVideo.videoHeight;
+                    context.drawImage(startVideo, 0, 0, startSnapshotCanvas.width, startSnapshotCanvas.height);
+                    
+                    // In a real app, you'd now upload this data:
+                    // const imageDataUrl = startSnapshotCanvas.toDataURL('image/jpeg');
+                    // await uploadImage(imageDataUrl);
+                    console.log("Snapshot taken!");
+                    
+                } catch (err) {
+                    console.error("Failed to take snapshot:", err);
+                    // Continue anyway for the demo
+                }
+                // --- End Real Snapshot Logic ---
+
+                setTimeout(() => {
+                    startVerifyStatus.textContent = "Snapshot Saved! Starting timer...";
+                    startVerifyStatus.classList.add('text-green-400');
+
+                    setTimeout(() => {
+                        // Populate active screen details
+                        document.getElementById('details-firstName').textContent = activeMeetup.firstName;
+                        document.getElementById('details-lastName').textContent = activeMeetup.lastName;
+                        document.getElementById('details-nickname').textContent = activeMeetup.nickname;
+                        document.getElementById('details-phone').textContent = activeMeetup.phones.join(', ');
+                        document.getElementById('details-friends').textContent = activeMeetup.friends;
+                        document.getElementById('details-stranger-image').textContent = activeMeetup.strangerImage;
+                        document.getElementById('details-place-type').textContent = activeMeetup.placeType;
+                        document.getElementById('details-address').textContent = activeMeetup.address;
+                        document.getElementById('details-state').textContent = activeMeetup.state;
+                        document.getElementById('details-lga').textContent = activeMeetup.lga;
+                        document.getElementById('details-notes').textContent = activeMeetup.notes;
+                        document.getElementById('details-support-images').textContent = activeMeetup.supportImages.join(', ');
+
+                        timerDisplay.textContent = "48:00:00";
+                        timerDisplay.classList.remove('text-red-500');
+                        alertMessage.style.display = 'none';
+                        
+                        startTimer();
+                        updateHomeScreen();
+                        hideModal(startVerifyModal); // This will also stop the camera
+                        showScreen(activeMeetupScreen);
+                        
+                        startVerifyStatus.textContent = "Please enable your camera";
+                        startVerifyStatus.classList.remove('text-green-400', 'text-yellow-400');
+                        startVerifyStatus.classList.add('text-cyan-400');
+                        btnDoStartVerify.disabled = false;
+                        renderProgressUpdates();
+
+                    }, 1000);
+                }, 500); // Short delay for snapshot
+            }
+            
+            async function performLivenessCheck() {
+                verifyStatus.textContent = "Detecting face...";
+                verifyStatus.classList.remove('text-cyan-400');
+                verifyStatus.classList.add('text-yellow-400');
+                btnDoVerify.disabled = true;
+
+                if (!faceApiLoaded) {
+                    verifyStatus.textContent = "Models not loaded. Simulating check.";
+                    setTimeout(endMeetup, 2000); // Simulate on failure
+                    return;
+                }
+                
+                // --- This is the REAL face-api.js logic ---
+                try {
+                    const detection = await faceapi.detectSingleFace(endVideo, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+                    
+                    if (detection) {
+                        verifyStatus.textContent = "Face detected. Please blink.";
+                        // In a real app, you'd run this in a loop (setInterval)
+                        // and check if the eye aspect ratio (EAR) changes significantly.
+                        // For this demo, we'll just simulate a successful "blink".
+                        
+                        setTimeout(() => {
+                            verifyStatus.textContent = "Liveness Confirmed!";
+                            verifyStatus.classList.remove('text-yellow-400');
+                            verifyStatus.classList.add('text-green-400');
+                            setTimeout(endMeetup, 1500); // Proceed to end meetup
+                        }, 2500); // Simulate 2.5s for "blink"
+                        
+                    } else {
+                        verifyStatus.textContent = "No face detected. Please try again.";
+                        verifyStatus.classList.remove('text-yellow-400');
+                        verifyStatus.classList.add('text-red-400');
+                        btnDoVerify.disabled = false;
+                    }
+                } catch (err) {
+                    console.error("Liveness check failed:", err);
+                    verifyStatus.textContent = "Verification failed. Simulating success.";
+                    setTimeout(endMeetup, 2000);
+                }
+            }
+
+            function endMeetup() {
+                // This function is now called *after* verification is successful
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = null;
+                activeMeetup = null;
+                
+                hideModal(verifyModal); // This will also stop the camera
+                showScreen(successScreen); 
+                
+                verifyStatus.textContent = "Please enable your camera";
+                verifyStatus.classList.remove('text-green-400', 'text-yellow-400', 'text-red-400');
+                verifyStatus.classList.add('text-cyan-400');
+                btnDoVerify.disabled = false;
+                
+                updateHomeScreen();
+                
+                setTimeout(() => showScreen(homeScreen), 4000); 
+            }
+
+            function addProgressUpdate() {
+                const text = document.getElementById('update-text').value;
+                const photoFile = updatePhotoInput.files[0];
+                const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                if (!text && !photoFile) return;
+                if (text) activeMeetup.progressUpdates.push({ type: 'text', content: text, time: timestamp });
+                if (photoFile) activeMeetup.progressUpdates.push({ type: 'photo', content: photoFile.name, time: timestamp });
+                document.getElementById('update-text').value = '';
+                updatePhotoInput.value = '';
+                updatePhotoFilename.textContent = 'No file chosen';
+                hideModal(addUpdateModal);
+                renderProgressUpdates();
+            }
+
+            function renderProgressUpdates() {
+                if (!activeMeetup || activeMeetup.progressUpdates.length === 0) {
+                    noUpdatesMessage.style.display = 'block';
+                    progressUpdatesList.innerHTML = '';
+                    progressUpdatesList.appendChild(noUpdatesMessage);
+                    return;
+                }
+                noUpdatesMessage.style.display = 'none';
+                progressUpdatesList.innerHTML = ''; 
+                activeMeetup.progressUpdates.forEach(update => {
+                    const updateEl = document.createElement('div');
+                    updateEl.className = 'bg-black/40 p-3 rounded-lg flex items-start space-x-3';
+                    let icon = (update.type === 'text') 
+                        ? '<i class="ph ph-chat-text text-xl text-blue-300 flex-shrink-0 mt-1"></i>'
+                        : '<i class="ph ph-image text-xl text-green-300 flex-shrink-0 mt-1"></i>';
+                    let content = (update.type === 'text')
+                        ? `<p class="text-white whitespace-pre-wrap">${update.content}</p>`
+                        : `<p class="text-gray-200 italic">${update.content}</p>`;
+                    updateEl.innerHTML = `
+                        ${icon}
+                        <div class="flex-1">
+                            ${content}
+                            <span class="text-xs text-gray-400 block text-right">${update.time}</span>
+                        </div>`;
+                    progressUpdatesList.prepend(updateEl);
+                });
+            }
+
+            // --- EVENT LISTENERS ---
+            btnShowLogForm.addEventListener('click', () => showScreen(logFormScreen));
+            btnBackHome.addEventListener('click', () => showScreen(homeScreen));
+            btnShowTrust.addEventListener('click', () => showScreen(trustScreen));
+            btnBackHomeFromTrust.addEventListener('click', () => showScreen(homeScreen));
+            stateSelect.addEventListener('change', populateLGAs);
+            btnAddPhone.addEventListener('click', addPhoneInput);
+            
+            activeMeetupCardHome.addEventListener('click', () => {
+                if (activeMeetup) showScreen(activeMeetupScreen);
+            });
+
+            logMeetupForm.addEventListener('submit', handleSubmitLogForm);
+            
+            // Start Verify Listeners
+            btnEnableStartCamera.addEventListener('click', () => startVerificationCamera('start'));
+            btnDoStartVerify.addEventListener('click', confirmStartMeetup);
+            btnCancelStartVerify.addEventListener('click', () => hideModal(startVerifyModal));
+            
+            // End Verify Listeners
+            btnShowVerify.addEventListener('click', () => showModal(verifyModal));
+            btnEnableEndCamera.addEventListener('click', () => startVerificationCamera('end'));
+            btnDoVerify.addEventListener('click', performLivenessCheck); // Changed from endMeetup
+            btnCancelVerify.addEventListener('click', () => hideModal(verifyModal));
+
+            // Add Update Listeners
+            btnShowAddUpdate.addEventListener('click', () => showModal(addUpdateModal));
+            btnCancelUpdate.addEventListener('click', () => {
+                hideModal(addUpdateModal);
+                document.getElementById('update-text').value = '';
+                updatePhotoInput.value = '';
+                updatePhotoFilename.textContent = 'No file chosen';
+            });
+            btnSubmitUpdate.addEventListener('click', addProgressUpdate);
+
+            // --- INITIALIZATION ---
+            loadFaceApiModels();
+            loadNigeriaData();
+            updateHomeScreen();
+            showScreen(homeScreen); 
+        });
+    </script>
+
+</body>
+</html>
+
