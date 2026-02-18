@@ -1,1069 +1,2081 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeMeet Logger</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
-    <!-- Load face-api.js for liveness check -->
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <!-- Use Inter font family -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        @keyframes gradient-animation {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .animated-gradient {
-            background: linear-gradient(-45deg, #4b0082, #8a2be2, #4169e1, #ff69b4, #ff007f);
-            background-size: 400% 400%;
-            animation: gradient-animation 15s ease infinite;
-        }
-        .app-screen {
-            height: 100vh; 
-            display: none;
-            flex-direction: column;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
-        .file-input-label {
-            display: inline-block; cursor: pointer; padding: 10px 16px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 8px; transition: all 0.3s ease;
-        }
-        .file-input-label:hover { background-color: rgba(255, 255, 255, 0.3); }
-        .file-input-filename {
-            font-size: 0.875rem; color: #d1d5db;
-            margin-left: 10px; font-style: italic;
-        }
-        select:disabled {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.4);
-        }
-        .phone-input-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .phone-input-row input {
-            flex-grow: 1;
-        }
-        .phone-input-row .remove-phone-btn {
-            background-color: rgba(255, 82, 82, 0.8);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-        .phone-input-row .remove-phone-btn:hover {
-            background-color: rgba(255, 82, 82, 1);
-        }
-        /* Error border for phone validation */
-        .input-error {
-            border: 2px solid #f87171 !important; /* red-400 */
-            box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
-        }
-    </style>
-</head>
-<body class="bg-gray-900">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeMeet | Premium Blue Light</title>
 
-    <div class="max-w-md mx-auto h-screen animated-gradient shadow-2xl overflow-hidden">
-        
-        <!-- Global Error Bar (New) -->
-        <div id="global-error-bar" class="hidden absolute top-0 left-0 right-0 bg-red-600 text-white p-3 text-center z-[100] shadow-lg" style="transform: translateY(-100%); transition: transform 0.3s ease-out;">
-            <span id="global-error-text"></span>
-            <button id="global-error-close" class="absolute top-1/2 -translate-y-1/2 right-3 text-white font-bold text-2xl">&times;</button>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/geodata/nigeriaLow.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root{
+      --primary-blue:#0ea5e9;
+      --deep-blue:#0c4a6e;
+      --light-blue:#f0f9ff;
+      --vibrant-cyan:#22d3ee;
+      --emergency-rose:#f43f5e;
+      --card-white:#ffffff;
+      --text-main:#0c4a6e;
+      --header-h:64px;
+      --nav-h:80px;
+    }
+
+    body{
+      font-family:'Inter',sans-serif;
+      background:#f8fafc;
+      color:var(--text-main);
+      min-height:100vh;
+    }
+
+    @keyframes flow{
+      0%{background-position:0% 50%;}
+      50%{background-position:100% 50%;}
+      100%{background-position:0% 50%;}
+    }
+    .animated-bg{
+      background:linear-gradient(-45deg,#f8fafc,#e0f2fe,#f0f9ff,#ffffff);
+      background-size:400% 400%;
+      animation:flow 15s ease infinite;
+    }
+
+    @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .gradient-border-card{
+      position:relative;border-radius:1.5rem;z-index:1;overflow:hidden;padding:2px;
+      box-shadow:0 10px 25px -5px rgba(14,165,233,0.15);
+    }
+    .gradient-border-card::before{
+      content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+      background:conic-gradient(transparent,var(--primary-blue),transparent,var(--vibrant-cyan),transparent);
+      animation:rotate 6s linear infinite;z-index:-1;
+    }
+    .white-inner{background:var(--card-white);border-radius:1.45rem;height:100%;width:100%;}
+
+    /* Screens must account for header + fixed bottom nav */
+    .app-screen{
+      height: calc(100vh - var(--header-h) - var(--nav-h));
+      display:none;
+      flex-direction:column;
+      animation: slideUp .5s cubic-bezier(0.16,1,0.3,1);
+      overflow-y:auto;
+      padding-bottom: 24px;
+      scrollbar-width:none;
+    }
+    .app-screen::-webkit-scrollbar{display:none;}
+
+    @keyframes slideUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
+    .nav-item{color:#94a3b8;transition:all .3s ease;}
+    .nav-item.active{color:var(--primary-blue);}
+
+    .form-input{
+      background:#ffffff;border:1px solid #e2e8f0;color:var(--text-main);
+      border-radius:1.25rem;padding:1.1rem;width:100%;
+      transition:all .3s;box-shadow:0 2px 4px rgba(0,0,0,0.02);
+    }
+    .form-input:focus{
+      outline:none;border-color:var(--primary-blue);
+      box-shadow:0 0 0 4px rgba(14,165,233,0.1);
+    }
+    .form-input.input-error{
+      border-color:#ef4444;
+      background:#fff1f2;
+      box-shadow:0 0 0 4px rgba(239,68,68,0.14);
+    }
+    .field-error{
+      color:#b91c1c;
+      font-size:11px;
+      font-weight:700;
+      margin-top:6px;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+
+    .btn-primary{
+      background:linear-gradient(135deg,#0ea5e9,#0284c7);
+      color:white;transition:all .3s;
+      box-shadow:0 10px 20px -5px rgba(14,165,233,0.4);
+    }
+    .btn-primary:active{transform:scale(0.96);}
+
+    .stat-card{
+      background:white;border:1px solid #e2e8f0;border-radius:1.5rem;
+      box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    /* Social Proof Toast */
+    #social-proof-toast{
+      position:fixed;
+      bottom: calc(var(--nav-h) + 18px);
+      left:24px; right:24px;
+      z-index:70;
+      transform:translateY(160%);
+      opacity:0;
+      transition: transform .45s cubic-bezier(0.23,1,0.32,1), opacity .35s ease;
+      pointer-events:none;
+    }
+    #social-proof-toast.show{
+      transform:translateY(0);
+      opacity:1;
+    }
+
+    .hero-img-container{width:100%;height:220px;overflow:hidden;border-radius:2rem;position:relative;box-shadow:0 20px 25px -5px rgba(14,165,233,0.1);}
+    .hero-img-container img{width:100%;height:100%;object-fit:cover;}
+    .step-img{width:80px;height:80px;object-fit:cover;border-radius:1rem;}
+
+    .file-input-label{
+      display:inline-block;cursor:pointer;padding:10px 16px;
+      background-color:#f0f9ff;color:var(--primary-blue);
+      border:1px dashed var(--primary-blue);
+      border-radius:12px;transition:all .3s ease;font-size:.8rem;font-weight:600;
+    }
+
+    @keyframes scan{0%{top:0%;}100%{top:100%;}}
+    .scan-line{
+      position:absolute;width:100%;height:2px;background:var(--vibrant-cyan);
+      box-shadow:0 0 10px var(--vibrant-cyan);
+      animation:scan 2s linear infinite alternate;
+    }
+
+    @keyframes dotBlink{
+      0%,100%{opacity:.25;transform:scale(.85);}
+      50%{opacity:1;transform:scale(1.2);}
+    }
+    .map-dot{animation:dotBlink 1.8s ease-in-out infinite;transform-origin:center;}
+    .map-dot-green{fill:#22c55e;}
+    .map-dot-yellow{fill:#eab308;}
+  </style>
+</head>
+
+<body class="animated-bg overflow-hidden">
+
+  <div class="max-w-md mx-auto h-screen shadow-2xl overflow-hidden relative border-x border-slate-200 bg-white/20 backdrop-blur-sm">
+
+    <!-- Social Proof Toast -->
+    <div id="social-proof-toast">
+      <div class="bg-white/90 backdrop-blur-md border border-blue-100 shadow-xl rounded-2xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+          <i class="ph-bold ph-user-circle text-blue-600 text-xl"></i>
+        </div>
+        <div>
+          <p id="toast-text" class="text-xs font-medium text-blue-900 leading-tight">Someone in Lagos just logged a meetup.</p>
+          <p class="text-[10px] text-blue-400 font-bold uppercase mt-1">Verified User • Now</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Header -->
+    <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100">
+      <div class="flex items-center gap-2">
+        <i class="ph-bold ph-shield-check text-cyan-500 text-2xl"></i>
+        <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">SafeMeet</span>
+      </div>
+      <div id="user-info-reveal" class="hidden flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center">
+          <i class="ph-bold ph-user text-blue-600"></i>
+        </div>
+      </div>
+    </header>
+
+    <div class="relative w-full h-full">
+
+      <!-- SCREEN: LANDING -->
+      <div id="screen-landing" class="app-screen p-6 space-y-10">
+        <div class="space-y-4 pt-4">
+          <div class="hero-img-container">
+            <img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=800" alt="Traveler safety">
+            <div class="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent"></div>
+            <div class="absolute bottom-4 left-6 right-6">
+              <p class="text-white text-sm font-bold uppercase tracking-widest drop-shadow-md">Verified Secure Logging</p>
+            </div>
+          </div>
+          <h1 class="text-4xl font-extrabold leading-tight text-blue-900">Meetup with Confidence.</h1>
+          <p class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
+          <div class="flex flex-col gap-3">
+            <button id="btn-landing-signup" class="w-full btn-primary font-bold py-5 rounded-2xl shadow-xl">
+              Sign Up
+            </button>
+            <button id="btn-landing-signin" class="w-full bg-white text-blue-700 border border-blue-200 font-bold py-4 rounded-2xl shadow-sm">
+              Sign In
+            </button>
+          </div>
+          <p class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Log New Meetup</p>
+          <p class="text-center text-xs font-bold text-slate-500">Take control of your safety. You're in charge.</p>
         </div>
 
-        <div class="relative w-full h-full text-white">
+        <div class="bg-blue-600 text-white p-6 rounded-[2.5rem] text-center shadow-xl shadow-blue-500/30">
+          <p class="font-black text-lg">Trusted by over 15,432 travelers</p>
+          <p class="text-blue-100 text-xs mt-1 italic">In Maiduguri and worldwide</p>
+        </div>
 
-            <!-- 
-              =================================
-              SCREEN 1: HOME DASHBOARD
-              =================================
-            -->
-            <div id="screen-home" class="app-screen p-6 pt-12 space-y-8">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h1 class="text-4xl font-bold">SafeMeet</h1>
-                        <p class="text-lg text-gray-200">Your personal safety check-in.</p>
-                    </div>
-                    <button id="btn-show-trust" class="bg-black/20 backdrop-blur-md p-3 rounded-full transform transition-all hover:bg-black/40 active:scale-90" title="Trust & Privacy">
-                        <i class="ph-bold ph-shield-check text-3xl text-cyan-300"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-4 pt-4 text-center">
-                    <p class="text-lg text-gray-100">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
-                    <button id="btn-show-log-form" class="w-full bg-white text-blue-700 font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:shadow-xl active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
-                        <i class="ph-bold ph-plus-circle text-2xl"></i>
-                        <span>Log New Meetup</span>
-                    </button>
-                    <p class="text-sm text-gray-200">Take control of your safety. You're in charge.</p>
-                </div>
+        <div class="space-y-8">
+          <h2 class="text-2xl font-black text-blue-900 text-center">Safety in 3 Simple Steps</h2>
 
-                <div class="space-y-4">
-                    <h2 class="text-2xl font-semibold border-b border-white/20 pb-2">Active Meetup</h2>
-                    <div id="active-meetup-card-home" class="hidden bg-black/30 backdrop-blur-md p-4 rounded-lg shadow-md transition-all cursor-pointer hover:bg-black/40">
-                        <p class="text-gray-200">Meetup in progress. Tap to view.</p>
-                        <div class="flex justify-between items-center mt-2">
-                            <span id="active-meetup-name-home" class="font-semibold text-lg"></span>
-                            <span class="text-sm text-yellow-300 font-semibold flex items-center space-x-1">
-                                <i class="ph-fill ph-timer text-lg"></i>
-                                <span>TIMER RUNNING</span>
-                            </span>
-                        </div>
-                    </div>
-                    <div id="no-active-meetup" class="text-center text-gray-300 py-4">
-                        <p>No active meetups.</p>
-                        <p class="text-sm">You're all clear!</p>
-                    </div>
-                </div>
+          <div class="space-y-10">
+            <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-4">
+                <div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center font-black flex-shrink-0">1</div>
+                <h3 class="font-bold text-xl text-blue-900 leading-none">Create Your Profile</h3>
+              </div>
+              <div class="flex gap-4">
+                <img src="https://images.unsplash.com/photo-1512314889357-e157c22f938d?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 1">
+                <p class="text-sm text-slate-500 leading-relaxed">Sign up and add your emergency contacts (Next of Kin, Trusted Friend). This information is encrypted and private.</p>
+              </div>
             </div>
 
-            <!-- 
-              =================================
-              SCREEN 2: LOG MEETUP FORM
-              =================================
-            -->
-            <div id="screen-log-form" class="app-screen p-6 pt-12 space-y-4">
-                <div class="flex items-center justify-between">
-                    <button id="btn-back-home" class="flex items-center space-x-1 text-gray-200 hover:text-white transition-all">
-                        <i class="ph-bold ph-arrow-left text-xl"></i>
-                        <span>Back</span>
-                    </button>
-                    <h1 class="text-3xl font-bold text-right">Log Details</h1>
-                </div>
-                <p class="text-gray-200 text-sm">This information is encrypted and will be **permanently deleted** after you end your meetup safely.</p>
-
-                <div class="flex-1 overflow-y-auto overscroll-contain pb-24 space-y-4" id="form-scroll-container">
-                    <form id="log-meetup-form" class="space-y-4">
-                        
-                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
-                            <legend class="text-lg font-semibold text-white px-2">Person's Details</legend>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="meetup-first-name" class="block text-sm font-medium text-gray-100">First Name *</label>
-                                    <input type="text" id="meetup-first-name" required class="form-input">
-                                </div>
-                                <div>
-                                    <label for="meetup-last-name" class="block text-sm font-medium text-gray-100">Last Name *</label>
-                                    <input type="text" id="meetup-last-name" required class="form-input">
-                                </div>
-                            </div>
-                            <div>
-                                <label for="meetup-nickname" class="block text-sm font-medium text-gray-100">Nickname (Optional)</label>
-                                <input type="text" id="meetup-nickname" class="form-input">
-                            </div>
-                             
-                            <div id="phone-numbers-container" class="space-y-2">
-                                <label class="block text-sm font-medium text-gray-100">Phone(s) (11 digits, optional)</label>
-                                <div class="phone-input-row">
-                                    <input type="tel" class="form-input phone-input" pattern="[0-9]{11}" title="Phone number must be exactly 11 digits." maxlength="11" placeholder="08012345678">
-                                </div>
-                            </div>
-                            <button type="button" id="btn-add-phone" class="w-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center space-x-1">
-                                <i class="ph ph-plus"></i>
-                                <span>Add another phone number</span>
-                            </button>
-                            
-                            <div>
-                                <label for="meetup-friends" class="block text-sm font-medium text-gray-100">Friends/Acquaintances (Optional)</label>
-                                <textarea id="meetup-friends" rows="2" class="form-input" placeholder="e.g., 'Friends with John Doe on FB'"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-100">Image of Stranger (Optional)</label>
-                                <label for="meetup-stranger-image" class="file-input-label">
-                                    <i class="ph ph-upload-simple"></i> Choose File
-                                </label>
-                                <input type="file" id="meetup-stranger-image" class="hidden" accept="image/*">
-                                <span id="stranger-image-filename" class="file-input-filename">No file chosen</span>
-                            </div>
-                        </fieldset>
-
-                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
-                            <legend class="text-lg font-semibold text-white px-2">Meetup Details</legend>
-                            <div>
-                                <label for="meetup-place-type" class="block text-sm font-medium text-gray-100">Type of Place *</label>
-                                <select id="meetup-place-type" required class="form-input">
-                                    <option value="" disabled selected>Select a place type...</option>
-                                    <option value="Hotel">Hotel</option>
-                                    <option value="Home">Home</option>
-                                    <option value="Restaurant">Restaurant</option>
-                                    <option value="Office">Office</option>
-                                    <option value="Car">Car</option>
-                                    <option value="Public Space">Public Space</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="meetup-address" class="block text-sm font-medium text-gray-100">Address / Location *</label>
-                                <textarea id="meetup-address" rows="2" required class="form-input" placeholder="e.g., '123 Main St, Apt 4B'"></textarea>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="meetup-state" class="block text-sm font-medium text-gray-100">State *</label>
-                                    <select id="meetup-state" required class="form-input">
-                                        <option value="" disabled selected>Loading states...</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="meetup-lga" class="block text-sm font-medium text-gray-100">LGA *</label>
-                                    <select id="meetup-lga" required class="form-input" disabled>
-                                        <option value="" disabled selected>Select state first</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </fieldset>
-
-                        <fieldset class="bg-black/20 backdrop-blur-sm p-4 rounded-lg space-y-4">
-                            <legend class="text-lg font-semibold text-white px-2">Supporting Info</legend>
-                            <div>
-                                <label for="meetup-notes" class="block text-sm font-medium text-gray-100">Additional Information (Optional)</label>
-                                <textarea id="meetup-notes" rows="3" class="form-input" placeholder="e.g., 'Purpose of meeting', 'Their car plate is ABC-123'"></textarea>
-                            </div>
-                             <div>
-                                <label class="block text-sm font-medium text-gray-100">Supporting Images/Screenshots (Optional)</label>
-                                <label for="meetup-support-images" class="file-input-label">
-                                    <i class="ph ph-upload-simple"></i> Choose Files
-                                </label>
-                                <input type="file" id="meetup-support-images" class="hidden" multiple accept="image/*">
-                                <span id="support-images-filename" class="file-input-filename">No files chosen</span>
-                            </div>
-                        </fieldset>
-
-                        <button type="submit" class="w-full bg-green-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-green-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
-                            <i class="ph-bold ph-shield-check text-2xl"></i>
-                            <span>Proceed to Verification</span>
-                        </button>
-                    </form>
-                </div>
+            <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-4">
+                <div class="bg-cyan-100 text-cyan-600 w-10 h-10 rounded-full flex items-center justify-center font-black flex-shrink-0">2</div>
+                <h3 class="font-bold text-xl text-blue-900 leading-none">Log Your Stay</h3>
+              </div>
+              <div class="flex gap-4">
+                <img src="https://images.unsplash.com/photo-1551820842-77bb5df74b5c?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 2">
+                <p class="text-sm text-slate-500 leading-relaxed">Before you check in, log your hotel name, room number, and expected check-out date. Use auto-location for precise GPS data.</p>
+              </div>
             </div>
 
-            <!-- 
-              =================================
-              SCREEN 3: ACTIVE MEETUP TIMER
-              =================================
-            -->
-            <div id="screen-active-meetup" class="app-screen p-6 pt-12 space-y-4">
-                <h1 class="text-3xl font-bold text-center text-yellow-300">Meetup in Progress</h1>
-                
-                <div class="text-center space-y-1 py-4 bg-black/20 backdrop-blur-sm rounded-lg">
-                    <p class="text-gray-200">Safety timer is active. Alert after:</p>
-                    <div id="timer-display" class="text-6xl font-bold text-white tracking-tighter">
-                        48:00:00
-                    </div>
-                    <p id="alert-message" class="text-red-400 font-semibold hidden">TIMER EXPIRED. AUTHORITIES WILL BE NOTIFIED.</p>
+            <div class="flex flex-col gap-4">
+              <div class="flex items-center gap-4">
+                <div class="bg-emerald-100 text-emerald-600 w-10 h-10 rounded-full flex items-center justify-center font-black flex-shrink-0">3</div>
+                <h3 class="font-bold text-xl text-blue-900 leading-none">Travel Confidently</h3>
+              </div>
+              <div class="flex gap-4">
+                <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 3">
+                <p class="text-sm text-slate-500 leading-relaxed">Relax knowing there's a secure record of your whereabouts and emergency profile setup for rapid response.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-900 to-blue-700 p-8 rounded-[3rem] text-white space-y-8 shadow-2xl">
+          <h2 class="text-3xl font-black leading-tight">Don't Be A Statistic.</h2>
+          <p class="text-blue-100 text-sm">Every year, thousands of solo travelers face unforeseen dangers. Prep is key.</p>
+
+          <div class="grid grid-cols-1 gap-6">
+            <div class="flex items-center gap-4">
+              <span class="text-4xl font-black text-cyan-300 drop-shadow-sm">7m</span>
+              <p class="text-[10px] text-blue-100 uppercase font-black tracking-widest leading-tight">Avg. time for report initiation</p>
+            </div>
+            <div class="flex items-center gap-4 border-t border-blue-800 pt-4">
+              <span class="text-4xl font-black text-cyan-300 drop-shadow-sm">48%</span>
+              <p class="text-[10px] text-blue-100 uppercase font-black tracking-widest leading-tight">Increase in incidents without plans</p>
+            </div>
+            <div class="flex items-center gap-4 border-t border-blue-800 pt-4">
+              <span class="text-4xl font-black text-emerald-400 drop-shadow-sm">1 Click</span>
+              <p class="text-[10px] text-blue-100 uppercase font-black tracking-widest leading-tight">To secure your log instantly</p>
+            </div>
+          </div>
+          <p class="text-center font-bold italic text-blue-200 pt-4">Don't Wait, Secure Your Trip.</p>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="space-y-8">
+          <h2 class="text-2xl font-black text-blue-900 text-center">What Our Users Say</h2>
+          <div class="grid gap-6">
+            <div class="stat-card p-8 border-l-8 border-blue-500">
+              <p class="text-sm text-slate-600 italic leading-relaxed">"As a frequent solo business traveler, SafeMeet is a non-negotiable part of my routine. It gives my family incredible peace of mind. I feel so much safer."</p>
+              <div class="mt-6 flex items-center gap-4">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" class="w-12 h-12 rounded-full border-4 border-blue-50 shadow-md" alt="Jessica">
+                <div>
+                  <span class="block font-black text-blue-900">Jessica S.</span>
+                  <span class="text-[10px] text-blue-400 uppercase font-black tracking-widest">Consultant</span>
                 </div>
-
-                <button id="btn-show-verify" class="w-full bg-red-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-red-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 flex items-center justify-center space-x-2">
-                    <i class="ph-bold ph-lock-key-open text-2xl"></i>
-                    <span>End Meetup Safely</span>
-                </button>
-
-                <div class="flex-1 overflow-y-auto overscroll-contain space-y-4 pb-24">
-                    
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-2xl font-semibold">Progress Updates</h2>
-                            <button id="btn-show-add-update" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow transform transition-all active:scale-95 hover:bg-blue-600 flex items-center space-x-1">
-                                <i class="ph ph-plus"></i>
-                                <span>Add</span>
-                            </button>
-                        </div>
-                        <div id="progress-updates-list" class="space-y-2 max-h-48 overflow-y-auto bg-black/30 backdrop-blur-md p-3 rounded-lg">
-                            <p id="no-updates-message" class="text-gray-300 text-sm italic">No updates added yet.</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <h2 class="text-2xl font-semibold border-t border-white/20 pt-4">Logged Details</h2>
-                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="detail-item"><span class="detail-label">First Name</span><span id="details-firstName" class="detail-value"></span></div>
-                                <div class="detail-item"><span class="detail-label">Last Name</span><span id="details-lastName" class="detail-value"></span></div>
-                            </div>
-                            <div class="detail-item"><span class="detail-label">Nickname</span><span id="details-nickname" class="detail-value"></span></div>
-                            <div class="detail-item"><span class="detail-label">Phone(s)</span><span id="details-phone" class="detail-value whitespace-pre-wrap"></span></div>
-                            <div class="detail-item"><span class="detail-label">Friends/Acquaintances</span><span id="details-friends" class="detail-value whitespace-pre-wrap"></span></div>
-                            <div class="detail-item"><span class="detail-label">Stranger's Photo</span><span id="details-stranger-image" class="detail-value text-cyan-300"></span></div>
-                            <hr class="border-white/10">
-                            <div class="detail-item"><span class="detail-label">Place Type</span><span id="details-place-type" class="detail-value"></span></div>
-                            <div class="detail-item"><span class="detail-label">Address</span><span id="details-address" class="detail-value whitespace-pre-wrap"></span></div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="detail-item"><span class="detail-label">State</span><span id="details-state" class="detail-value"></span></div>
-                                <div class="detail-item"><span class="detail-label">LGA</span><span id="details-lga" class="detail-value"></span></div>
-                            </div>
-                             <hr class="border-white/10">
-                            <div class="detail-item"><span class="detail-label">Additional Information</span><span id="details-notes" class="detail-value whitespace-pre-wrap"></span></div>
-                            <div class="detail-item"><span class="detail-label">Supporting Images</span><span id="details-support-images" class="detail-value text-cyan-300"></span></div>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
 
-            <!-- 
-              =================================
-              SCREEN 4: SUCCESS MESSAGE
-              =================================
-            -->
-            <div id="screen-success" class="app-screen p-6 pt-32 text-center space-y-6 justify-center">
-                <i class="ph-bold ph-shield-slashed text-8xl text-green-400 mx-auto"></i>
-                <h1 class="text-4xl font-bold">Meetup Ended</h1>
-                <p class="text-lg text-gray-200">Your safety timer is cancelled. We're glad you're safe!</p>
-                <p class="text-lg text-gray-100 bg-black/30 backdrop-blur-md p-4 rounded-lg font-semibold">
-                    As promised, your log, photos, and all associated meetup data have been
-                    <span class="text-red-400">PERMANENTLY DELETED</span>
-                    from our system.
-                </p>
+            <div class="stat-card p-8 border-l-8 border-cyan-400">
+              <p class="text-sm text-slate-600 italic leading-relaxed">"I used this on my backpacking trip. Knowing my parents had a way to trace my steps was comforting. Clean and super intuitive."</p>
+              <div class="mt-6 flex items-center gap-4">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150" class="w-12 h-12 rounded-full border-4 border-cyan-50 shadow-md" alt="Mike">
+                <div>
+                  <span class="block font-black text-blue-900">Mike T.</span>
+                  <span class="text-[10px] text-cyan-500 uppercase font-black tracking-widest">Adventurer</span>
+                </div>
+              </div>
             </div>
 
-            <!-- 
-              =================================
-              SCREEN 5: TRUST CENTER
-              =================================
-            -->
-            <div id="screen-trust" class="app-screen p-6 pt-12 space-y-6">
-                <div class="flex items-center justify-between">
-                    <button id="btn-back-home-from-trust" class="flex items-center space-x-1 text-gray-200 hover:text-white transition-all">
-                        <i class="ph-bold ph-arrow-left text-xl"></i>
-                        <span>Back</span>
-                    </button>
-                    <h1 class="text-3xl font-bold text-right">Trust & Privacy</h1>
+            <div class="stat-card p-8 border-l-8 border-indigo-400">
+              <p class="text-sm text-slate-600 italic leading-relaxed">"The interface is super intuitive. It takes less than 30 seconds to log my stay. A brilliant and much-needed tool."</p>
+              <div class="mt-6 flex items-center gap-4">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150" class="w-12 h-12 rounded-full border-4 border-indigo-50 shadow-md" alt="Anna">
+                <div>
+                  <span class="block font-black text-blue-900">Anna C.</span>
+                  <span class="text-[10px] text-indigo-500 uppercase font-black tracking-widest">Digital Nomad</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                <div class="flex-1 overflow-y-auto overscroll-contain space-y-6 pb-24">
-                    <div class="text-center space-y-2">
-                        <i class="ph-bold ph-shield-check text-7xl text-cyan-300 mx-auto"></i>
-                        <h2 class="text-2xl font-semibold">Your Data is Yours. Period.</h2>
-                    </div>
-                    <p class="text-gray-200">
-                        We built this app for one reason: your safety. Our entire system is designed around your privacy. Here is our simple promise to you.
-                    </p>
-                    <div class="space-y-4">
-                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
-                            <i class="ph-bold ph-key text-3xl text-yellow-300 flex-shrink-0 mt-1"></i>
-                            <div>
-                                <h3 class="text-lg font-semibold">End-to-End Encryption</h3>
-                                <p class="text-gray-300 text-sm">Your log data (names, photos, locations) is encrypted on your device *before* it's sent. We cannot see it.</p>
-                            </div>
-                        </div>
-                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
-                            <i class="ph-bold ph-timer text-3xl text-red-400 flex-shrink-0 mt-1"></i>
-                            <div>
-                                <h3 class="text-lg font-semibold">The 48-Hour Timer</h3>
-                                <p class="text-gray-300 text-sm">If your timer expires, our system *automatically* sends your encrypted log to emergency contacts or local authorities.</p>
-                            </div>
-                        </div>
-                        <div class="bg-black/30 backdrop-blur-md p-4 rounded-lg flex items-start space-x-4">
-                            <i class="ph-bold ph-shield-slashed text-3xl text-green-400 flex-shrink-0 mt-1"></i>
-                            <div>
-                                <h3 class="text-lg font-semibold">Permanent Deletion</h3>
-                                <p class="text-gray-300 text-sm">The *moment* you safely end your meetup, your *entire* encrypted log is permanently deleted from our servers. We keep nothing.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="pb-12 text-center">
+          <p class="text-slate-400 text-[10px] uppercase font-black tracking-[0.3em]">Guardian Angel App v2.0</p>
+        </div>
+      </div>
+
+      <!-- SCREEN: AUTH -->
+      <div id="screen-auth" class="app-screen p-8 space-y-8">
+        <div class="space-y-2 text-center pt-8">
+          <h1 id="auth-title" class="text-3xl font-extrabold text-blue-900">Sign Up</h1>
+          <p id="auth-subtitle" class="text-slate-500">Enter your details to proceed.</p>
+        </div>
+        <form id="auth-form" class="space-y-4">
+          <div id="signup-fields">
+            <input type="text" id="auth-name" placeholder="Full Name" class="form-input">
+          </div>
+          <input type="tel" id="auth-phone" placeholder="Phone Number" maxlength="11"
+                 inputmode="numeric"
+                 oninput="this.value=this.value.replace(/\\D/g,'')"
+                 pattern="[0-9]{11}" minlength="11"
+                 required class="form-input">
+          <input type="password" id="auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 placeholder="4-Digit PIN"
+                 oninput="this.value=this.value.replace(/\\D/g,'')"
+                 required class="form-input text-center text-2xl tracking-[0.5em]">
+
+          <button type="submit" class="w-full btn-primary font-bold py-4 rounded-2xl shadow-lg mt-4">Continue</button>
+        </form>
+        <button type="button" id="btn-toggle-auth" class="w-full text-center text-sm font-semibold text-blue-600">Already have an account? Sign In</button>
+      </div>
+
+      <!-- SCREEN: HOME -->
+      <div id="screen-home" class="app-screen p-6 space-y-6">
+        <div class="flex justify-between items-center">
+          <h1 class="text-2xl font-extrabold text-blue-900">Dashboard</h1>
+          <div class="flex items-center gap-3">
+            <i class="ph-bold ph-bell text-blue-400 text-2xl"></i>
+          </div>
+        </div>
+
+        <!-- This ID was missing in your HTML but referenced in JS -->
+        <div id="no-active-meetup" class="stat-card p-6 min-h-[192px] flex flex-col justify-center items-center gap-4 text-center">
+            <p class="font-bold text-blue-900 text-lg">Going on a date or meeting a stranger?</p>
+            <p class="text-xs text-slate-500">A 2-minute log gives you a 48-hour safety net.</p>
+            <button id="btn-home-log" class="btn-primary px-10 py-3 rounded-2xl font-bold text-sm">
+              Log New Meetup
+            </button>
+            <p class="text-[11px] text-slate-500 font-semibold">Take control of your safety. You're in charge.</p>
+        </div>
+
+        <div id="active-meetup-card-home" class="hidden stat-card cursor-pointer p-5 min-h-[92px] flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+              <i class="ph-bold ph-timer text-blue-600 text-2xl animate-pulse"></i>
+            </div>
+            <div>
+              <span id="active-meetup-name-display" class="block font-black text-blue-900">Logging Active</span>
+              <span class="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Tap to view details</span>
+            </div>
+          </div>
+          <i class="ph-bold ph-caret-right text-blue-300"></i>
+        </div>
+
+        <h2 class="text-lg font-black text-blue-900 mt-4 uppercase tracking-wider">Safety Pulse</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="stat-card p-6 text-center">
+            <span class="block text-3xl font-black text-blue-600">15k+</span>
+            <span class="text-[8px] text-slate-400 uppercase font-black tracking-[0.2em]">Active Watch</span>
+          </div>
+          <div class="stat-card p-6 text-center">
+            <span class="block text-3xl font-black text-emerald-500">100%</span>
+            <span class="text-[8px] text-slate-400 uppercase font-black tracking-[0.2em]">Private</span>
+          </div>
+        </div>
+
+        <div class="stat-card p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Live Users in Nigeria</h3>
+            <span id="active-users-count" class="text-sm font-black text-blue-700">0 Users</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-[10px] uppercase font-black tracking-widest">
+            <div class="bg-emerald-50 text-emerald-700 rounded-xl p-2 text-center">
+              Logged (Green): <span id="logged-users-count">0</span>
+            </div>
+            <div class="bg-amber-50 text-amber-700 rounded-xl p-2 text-center">
+              Almost Finish (Yellow): <span id="almost-users-count">0</span>
+            </div>
+          </div>
+          <div class="bg-blue-50 rounded-2xl p-2 border border-blue-100">
+            <div id="nigeria-map-chart" class="w-full h-44 md:h-56"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN: LOG FORM -->
+      <div id="screen-log-form" class="app-screen p-6 space-y-6">
+        <h1 class="text-2xl font-extrabold text-blue-900">Log Meetup Details</h1>
+        <div class="stat-card p-4">
+          <p class="text-xs font-black text-blue-500 uppercase tracking-widest">Log Details</p>
+          <p class="text-xs text-slate-500 leading-relaxed mt-1">
+            This information is encrypted and will be <strong>permanently deleted</strong> after you end your meetup safely.
+          </p>
+        </div>
+
+        <form id="log-form" class="space-y-6 pb-20">
+          <div class="space-y-4">
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">The Stranger</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <input type="text" id="fname" placeholder="First Name (Optional)" class="form-input">
+              <input type="text" id="lname" placeholder="Last Name (Optional)" class="form-input">
             </div>
 
-            <!-- 
-              =================================
-              MODAL: START VERIFICATION
-              =================================
-            -->
-            <div id="modal-start-verify" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
-                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
-                    <h2 class="text-2xl font-bold">Log Verification</h2>
-                    <p class="text-gray-300">Take a quick snapshot of yourself to confirm you are starting this log. This is stored with the log.</p>
-                    <div class="w-full h-48 mx-auto bg-gray-900 rounded-lg overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
-                        <video id="start-video-feed" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                        <i id="start-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
-                    </div>
-                    <canvas id="start-snapshot-canvas" class="hidden"></canvas>
-                    
-                    <p id="start-verify-status" class="text-lg text-cyan-400">Please enable your camera</p>
-                    
-                    <div class="space-y-3">
-                        <button id="btn-enable-start-camera" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95 flex items-center justify-center space-x-2">
-                            <i class="ph-bold ph-camera"></i>
-                            <span>Enable Camera</span>
-                        </button>
-                        <button id="btn-do-start-verify" class="w-full bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-cyan-600 active:scale-95 flex items-center justify-center space-x-2 hidden">
-                            <i class="ph-bold ph-aperture"></i>
-                            <span>Snap Photo & Start Timer</span>
-                        </button>
-                        <button id="btn-cancel-start-verify" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
+            <div id="phone-container" class="space-y-3">
+              <input type="tel" maxlength="11" placeholder="Phone (Optional, 11 Digits)" inputmode="numeric"
+                     oninput="this.value=this.value.replace(/\\D/g,'')" pattern="[0-9]{11}" minlength="11" class="form-input phone-entry">
             </div>
 
-            <!-- 
-              =================================
-              MODAL: FACIAL VERIFICATION (END)
-              =================================
-            -->
-            <div id="modal-verify" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
-                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
-                    <h2 class="text-2xl font-bold">Liveness Verification</h2>
-                    <p class="text-gray-300">To end the timer, please look at the camera. We need to verify you are a live person.</p>
-                    <div class="w-48 h-48 mx-auto bg-gray-900 rounded-full overflow-hidden relative border-4 border-gray-700 flex items-center justify-center">
-                        <video id="end-video-feed" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video> <!-- Mirrored for user comfort -->
-                        <i id="end-video-icon" class="ph-bold ph-user-circle text-8xl text-gray-600 absolute"></i>
-                    </div>
-                    
-                    <p id="verify-status" class="text-lg text-cyan-400">Please enable your camera</p>
-                    
-                    <div class="space-y-3">
-                        <button id="btn-enable-end-camera" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95 flex items-center justify-center space-x-2">
-                            <i class="ph-bold ph-camera"></i>
-                            <span>Enable Camera</span>
-                        </button>
-                        <button id="btn-do-verify" class="w-full bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-cyan-600 active:scale-95 hidden">
-                            Start Liveness Check
-                        </button>
-                        <button id="btn-cancel-verify" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
+            <button type="button" id="btn-add-phone" class="text-xs font-black text-blue-500 flex items-center gap-1 uppercase tracking-widest">
+              <i class="ph-bold ph-plus"></i> Add Another Phone
+            </button>
+
+            <input type="text" id="nickname" placeholder="Nickname (Optional)" class="form-input">
+            <textarea id="friends" placeholder="Friends/Acquaintances (Optional)" rows="2" class="form-input"></textarea>
+          </div>
+
+          <div class="space-y-4 border-t border-blue-50 pt-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Meetup Location</h3>
             </div>
 
-            <!-- MODAL: ADD PROGRESS UPDATE (No changes) -->
-            <div id="modal-add-update" class="hidden absolute inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-6 transition-opacity duration-300">
-                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center space-y-6 transform transition-all" style="animation: fadeIn 0.3s ease-out;">
-                    <h2 class="text-2xl font-bold">Add Progress Update</h2>
-                    <div class="text-left space-y-4">
-                        <div>
-                            <label for="update-text" class="block text-sm font-medium text-gray-100">Text Update (Optional)</label>
-                            <textarea id="update-text" rows="3" class="form-input" placeholder="e.g., 'Arrived safely.'"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-100">Photo Update (Optional)</label>
-                            <label for="update-photo" class="file-input-label">
-                                <i class="ph ph-upload-simple"></i> Choose File
-                            </label>
-                            <input type="file" id="update-photo" class="hidden" accept="image/*">
-                            <span id="update-photo-filename" class="file-input-filename">No file chosen</span>
-                        </div>
-                    </div>
-                    <div class="space-y-3">
-                        <button id="btn-submit-update" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-300 hover:bg-blue-600 active:scale-95">
-                            Add Update
-                        </button>
-                        <button id="btn-cancel-update" class="w-full bg-gray-700 text-gray-200 font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-600 active:scale-95">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
+            <select id="place-type" required class="form-input">
+              <option value="">Select a place type...</option>
+              <option>Hotel</option><option>Home</option><option>Restaurant</option>
+              <option>Office</option><option>Car</option><option>Public Space</option>
+              <option>Other</option>
+            </select>
+
+            <textarea id="address" placeholder="Address / Location / Landmark *" rows="3" required class="form-input"></textarea>
+
+            <div class="grid grid-cols-2 gap-4">
+              <select id="state-select" required class="form-input"><option value="">State *</option></select>
+              <select id="lga-select" disabled required class="form-input"><option value="">LGA *</option></select>
             </div>
 
-        </div> <!-- /App Content Area -->
-    </div> <!-- /App Shell -->
+            <button type="button" id="btn-gps" class="w-full text-[10px] bg-blue-50 text-blue-600 py-3 rounded-xl font-black uppercase tracking-widest border border-blue-100">
+              <i class="ph-bold ph-map-pin"></i> Activate GPS (Standard Feature)
+            </button>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
+            <p id="gps-status" class="hidden text-[11px] font-bold text-emerald-600 uppercase tracking-widest text-center"></p>
+          </div>
 
-            // --- Apply common form input classes ---
-            document.querySelectorAll('.form-input').forEach(el => {
-                el.classList.add(
-                    'mt-1', 'block', 'w-full', 'bg-white/20', 'backdrop-blur-sm', 
-                    'border-0', 'rounded-lg', 'py-3', 'px-4', 'text-white', 
-                    'placeholder-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-white'
-                );
-            });
-            document.querySelectorAll('select.form-input').forEach(el => {
-                el.classList.add('text-black'); 
-            });
-            document.querySelectorAll('.detail-item').forEach(el => el.classList.add('flex', 'flex-col'));
-            document.querySelectorAll('.detail-label').forEach(el => el.classList.add('block', 'text-sm', 'text-gray-300', 'font-medium'));
-            document.querySelectorAll('.detail-value').forEach(el => el.classList.add('text-lg', 'font-medium', 'text-white'));
+          <div class="space-y-4 border-t border-blue-50 pt-4">
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Supporting Evidence</h3>
 
-            // --- STATE ---
-            let activeMeetup = null;
-            let timerInterval = null;
-            const DURATION = 48 * 60 * 60 * 1000;
-            let nigeriaData = [];
-            let faceApiLoaded = false;
-            let modelsLoading = false; // Prevent race conditions
-            let startVideoStream = null;
-            let endVideoStream = null;
+            <div>
+              <label class="block text-xs font-black text-blue-900 mb-2 uppercase tracking-widest">Image of Stranger (Optional)</label>
+              <input id="img-stranger" type="file" accept="image/*" class="hidden">
+              <button type="button" id="btn-img-stranger" class="file-input-label opacity-60">
+                <i class="ph ph-image"></i> Choose File
+              </button>
+              <span id="fn-img-stranger" class="file-input-filename"></span>
+            </div>
 
-            // --- DOM ELEMENTS ---
-            const screens = document.querySelectorAll('.app-screen');
-            const homeScreen = document.getElementById('screen-home');
-            const logFormScreen = document.getElementById('screen-log-form');
-            const activeMeetupScreen = document.getElementById('screen-active-meetup');
-            const successScreen = document.getElementById('screen-success');
-            const trustScreen = document.getElementById('screen-trust');
-            
-            // Global Error Bar
-            const errorBar = document.getElementById('global-error-bar');
-            const errorText = document.getElementById('global-error-text');
-            const errorClose = document.getElementById('global-error-close');
-            
-            // Modals
-            const verifyModal = document.getElementById('modal-verify');
-            const startVerifyModal = document.getElementById('modal-start-verify');
-            const addUpdateModal = document.getElementById('modal-add-update');
+            <div>
+              <label class="block text-xs font-black text-blue-900 mb-2 uppercase tracking-widest">Supporting Images (Optional)</label>
+              <input id="img-support" type="file" accept="image/*" multiple class="hidden">
+              <button type="button" id="btn-img-support" class="file-input-label opacity-60">
+                <i class="ph ph-images"></i> Choose Files
+              </button>
+              <span id="fn-img-support" class="file-input-filename"></span>
+            </div>
 
-            // Buttons
-            const btnShowLogForm = document.getElementById('btn-show-log-form');
-            const btnBackHome = document.getElementById('btn-back-home');
-            const logMeetupForm = document.getElementById('log-meetup-form');
-            const btnShowTrust = document.getElementById('btn-show-trust');
-            const btnBackHomeFromTrust = document.getElementById('btn-back-home-from-trust');
-            const btnAddPhone = document.getElementById('btn-add-phone');
-            
-            // Start Verify Modal Buttons
-            const btnEnableStartCamera = document.getElementById('btn-enable-start-camera');
-            const btnDoStartVerify = document.getElementById('btn-do-start-verify');
-            const btnCancelStartVerify = document.getElementById('btn-cancel-start-verify');
-            
-            // End Verify Modal Buttons
-            const btnShowVerify = document.getElementById('btn-show-verify');
-            const btnEnableEndCamera = document.getElementById('btn-enable-end-camera');
-            const btnDoVerify = document.getElementById('btn-do-verify');
-            const btnCancelVerify = document.getElementById('btn-cancel-verify');
+            <textarea id="info-extra" placeholder="Additional Details (Optional)" rows="2" class="form-input"></textarea>
+          </div>
 
-            // Add Update Modal Buttons
-            const btnShowAddUpdate = document.getElementById('btn-show-add-update');
-            const btnCancelUpdate = document.getElementById('btn-cancel-update');
-            const btnSubmitUpdate = document.getElementById('btn-submit-update');
+          <button type="submit" class="w-full btn-primary font-black py-5 rounded-2xl shadow-2xl uppercase tracking-widest">
+            Start 48h Safety Watch
+          </button>
+        </form>
+      </div>
 
-            // Displays
-            const timerDisplay = document.getElementById('timer-display');
-            const alertMessage = document.getElementById('alert-message');
-            const activeMeetupCardHome = document.getElementById('active-meetup-card-home');
-            const activeMeetupNameHome = document.getElementById('active-meetup-name-home');
-            const noActiveMeetup = document.getElementById('no-active-meetup');
-            const verifyStatus = document.getElementById('verify-status');
-            const startVerifyStatus = document.getElementById('start-verify-status');
-            const progressUpdatesList = document.getElementById('progress-updates-list');
-            const noUpdatesMessage = document.getElementById('no-updates-message');
+      <!-- SCREEN: PROFILE -->
+      <div id="screen-profile" class="app-screen p-6 space-y-6">
+        <h1 class="text-2xl font-extrabold text-blue-900">Profile</h1>
+        <div class="stat-card p-5 space-y-2">
+          <p class="text-xs font-black text-blue-400 uppercase tracking-widest">Signed-In User</p>
+          <p id="profile-user-name" class="text-sm text-slate-700">Name: -</p>
+          <p id="profile-user-phone" class="text-sm text-slate-700">Phone: -</p>
+        </div>
+        <form id="profile-form" class="space-y-4">
+          <div class="stat-card p-5 space-y-4">
+            <h2 class="text-xs font-black text-blue-400 uppercase tracking-widest">Emergency Setup</h2>
+            <input type="text" id="fpc-name" placeholder="FPC Name (First Person to Contact)" class="form-input" required>
+            <input type="tel" id="fpc-phone" placeholder="FPC Phone (11 digits)" maxlength="11" minlength="11"
+                   inputmode="numeric" pattern="[0-9]{11}" oninput="this.value=this.value.replace(/\\D/g,'')" class="form-input" required>
+            <select id="fpc-relation" class="form-input" required>
+              <option value="">Relationship with FPC *</option>
+              <option>Friend</option>
+              <option>Sister</option>
+              <option>Brother</option>
+              <option>Acquitance</option>
+              <option>Mentor</option>
+              <option>Classmate</option>
+              <option>Business Partner</option>
+              <option>Father</option>
+              <option>Mother</option>
+              <option>Wife</option>
+              <option>Husband</option>
+              <option>Relative</option>
+              <option>Uncle</option>
+              <option>Aunty</option>
+            </select>
+            <select id="fpc-priority" class="form-input" required>
+              <option value="">Emergency Priority *</option>
+              <option value="person_then_police">Person first, then Police</option>
+              <option value="police_then_person">Police first, then Person</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full btn-primary font-black py-4 rounded-2xl shadow-2xl uppercase tracking-widest">
+            Save Profile
+          </button>
+        </form>
+        <div class="stat-card p-6">
+          <p class="text-xs font-black text-blue-400 uppercase tracking-widest">Saved FPC</p>
+          <p id="fpc-summary" class="text-sm text-slate-600 mt-2">No emergency contact saved yet.</p>
+        </div>
+      </div>
 
-            // Nigeria State/LGA Selects
-            const stateSelect = document.getElementById('meetup-state');
-            const lgaSelect = document.getElementById('meetup-lga');
+      <!-- SCREEN: ACTIVE -->
+      <div id="screen-active" class="app-screen p-6 space-y-8">
+        <div class="text-center space-y-4 pt-12">
+          <p class="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Guardian Watch Active</p>
+          <h1 id="timer" class="text-7xl font-black tracking-tighter text-blue-900 tabular-nums">48:00:00</h1>
+          <div class="w-48 h-2 bg-blue-50 mx-auto rounded-full overflow-hidden">
+            <div class="h-full bg-blue-600 w-full animate-pulse"></div>
+          </div>
+        </div>
 
-            // Video Elements
-            const startVideo = document.getElementById('start-video-feed');
-            const startVideoIcon = document.getElementById('start-video-icon');
-            const startSnapshotCanvas = document.getElementById('start-snapshot-canvas');
-            const endVideo = document.getElementById('end-video-feed');
-            const endVideoIcon = document.getElementById('end-video-icon');
+        <div class="space-y-4 pt-10">
+          <button id="btn-end-meetup" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl">
+            Verify to End Meetup
+          </button>
 
-            // --- File Input Handlers ---
-            const strangerImageInput = document.getElementById('meetup-stranger-image');
-            const strangerImageFilename = document.getElementById('stranger-image-filename');
-            strangerImageInput.addEventListener('change', () => {
-                strangerImageFilename.textContent = strangerImageInput.files.length > 0 ? strangerImageInput.files[0].name : 'No file chosen';
-            });
-            const supportImagesInput = document.getElementById('meetup-support-images');
-            const supportImagesFilename = document.getElementById('support-images-filename');
-            supportImagesInput.addEventListener('change', () => {
-                supportImagesFilename.textContent = supportImagesInput.files.length > 0 ? `${supportImagesInput.files.length} file(s) chosen` : 'No files chosen';
-            });
-            const updatePhotoInput = document.getElementById('update-photo');
-            const updatePhotoFilename = document.getElementById('update-photo-filename');
-            updatePhotoInput.addEventListener('change', () => {
-                updatePhotoFilename.textContent = updatePhotoInput.files.length > 0 ? updatePhotoInput.files[0].name : 'No file chosen';
-            });
+          <div class="stat-card p-6 border-t-4 border-blue-500">
+            <h3 class="text-xs font-black text-blue-900 uppercase tracking-[0.2em] mb-4">Current Protection</h3>
+            <p id="protection-text" class="text-sm text-slate-500 leading-relaxed italic">
+              The "SafeMeet Basic" switch is active. We will notify the authorities if you don't verify by the deadline.
+            </p>
+          </div>
 
-            // --- UI & ERROR HANDLING ---
-            function showGlobalError(message) {
-                errorText.textContent = message;
-                errorBar.classList.remove('hidden');
-                errorBar.style.transform = 'translateY(0%)';
-                setTimeout(hideGlobalError, 5000); // Auto-hide after 5 seconds
-            }
+          <div class="stat-card p-6 space-y-4">
+            <h3 class="text-xs font-black text-blue-900 uppercase tracking-[0.2em]">Meetup Details</h3>
+            <div id="active-meetup-details" class="text-xs text-slate-600 leading-relaxed">No active meetup.</div>
+            <textarea id="meetup-update-input" rows="2" class="form-input" placeholder="Add update note"></textarea>
+            <button id="btn-add-update" type="button" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs">
+              Add Update
+            </button>
+            <div id="meetup-updates-list" class="space-y-2 text-xs text-slate-600"></div>
+          </div>
+        </div>
+      </div>
 
-            function hideGlobalError() {
-                errorBar.style.transform = 'translateY(-100%)';
-                setTimeout(() => errorBar.classList.add('hidden'), 300);
-            }
+      <!-- MODAL: UPGRADE -->
+      <div id="modal-upgrade" class="hidden fixed inset-0 bg-blue-900/40 backdrop-blur-md z-[110] flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 space-y-8 shadow-2xl">
+          <div class="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto text-blue-600 shadow-inner">
+            <i class="ph-bold ph-lightning text-5xl"></i>
+          </div>
+          <div class="text-center space-y-2">
+            <h2 class="text-2xl font-black text-blue-900">Upgrade Required</h2>
+            <p id="upgrade-desc" class="text-sm text-slate-500 italic">This feature is premium only.</p>
+          </div>
 
-            // --- NAVIGATION ---
-            function showScreen(screenElement) {
-                stopAllCameras(); 
-                screens.forEach(s => s.style.display = 'none');
-                if (screenElement) {
-                    screenElement.style.display = 'flex';
-                }
-            }
-            
-            function showModal(modalElement) {
-                modalElement.classList.remove('hidden');
-                modalElement.classList.add('flex');
-            }
-            
-            function hideModal(modalElement) {
-                stopAllCameras(); 
-                modalElement.classList.add('hidden');
-                modalElement.classList.remove('flex');
-            }
+          <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100">
+            <p class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-3">Transfer to Upgrade</p>
+            <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Safe Meet</span></p>
+            <p class="text-xs font-bold text-blue-900 mt-1">Bank: <span class="font-black">Stanbic IBTC</span></p>
+            <p class="text-2xl font-black text-blue-600 mt-2">5770901212</p>
+          </div>
 
-            // --- CAMERA & VERIFICATION ---
-            async function loadFaceApiModels() {
-                if (faceApiLoaded || modelsLoading) return; // Already loaded or loading
-                modelsLoading = true;
-                
-                try {
-                    if (typeof faceapi === 'undefined') {
-                        throw new Error("face-api.js script failed to load.");
-                    }
-                    
-                    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                    faceApiLoaded = true;
-                    modelsLoading = false;
-                    console.log("FaceAPI models loaded.");
-                } catch (err) {
-                    modelsLoading = false;
-                    console.error("Failed to load FaceAPI models:", err);
-                    // This is the user-facing error message, replacing the alert
-                    showGlobalError("Failed to load facial models. Verification will be simulated.");
-                }
-            }
-            
-            async function startVerificationCamera(type) {
-                const videoEl = (type === 'start') ? startVideo : endVideo;
-                const videoIcon = (type === 'start') ? startVideoIcon : endVideoIcon;
-                const statusEl = (type === 'start') ? startVerifyStatus : verifyStatus;
-                const enableBtn = (type === 'start') ? btnEnableStartCamera : btnEnableEndCamera;
-                const actionBtn = (type === 'start') ? btnDoStartVerify : btnDoVerify;
+          <div class="grid gap-3">
+            <div class="rounded-2xl border border-blue-100 p-4 bg-white">
+              <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Packages</p>
+              <ul class="mt-2 text-xs text-slate-600 space-y-1">
+                <li><span class="font-black text-blue-900">Basic:</span> Just log basic stranger details</li>
+                <li><span class="font-black text-blue-900">Standard:</span> Basic + GPS</li>
+                <li><span class="font-black text-blue-900">Confidence Plus:</span> Basic + GPS + Pictures</li>
+              </ul>
+            </div>
 
-                statusEl.textContent = 'Requesting camera access...';
-                statusEl.classList.remove('text-cyan-400', 'text-red-400');
-                statusEl.classList.add('text-yellow-400');
-                
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-                    if (type === 'start') {
-                        startVideoStream = stream;
-                    } else {
-                        endVideoStream = stream;
-                    }
-                    videoEl.srcObject = stream;
-                    videoEl.style.display = 'block';
-                    videoIcon.style.display = 'none';
-                    
-                    statusEl.textContent = (type === 'start') ? 'Position your face' : 'Camera active. Look at camera.';
-                    statusEl.classList.remove('text-yellow-400');
-                    statusEl.classList.add('text-green-400');
-                    
-                    enableBtn.classList.add('hidden');
-                    actionBtn.classList.remove('hidden');
+            <div class="flex gap-4">
+              <button type="button" id="btn-upgrade-later" class="flex-1 text-slate-400 font-bold py-3 text-xs uppercase tracking-widest">Later</button>
+              <button type="button" id="btn-upgrade-paid" class="flex-1 btn-primary py-4 rounded-2xl font-black text-xs uppercase tracking-widest">I've Paid</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                } catch (err) {
-                    console.error("Camera access failed:", err);
-                    statusEl.textContent = "Camera access failed. Please check permissions.";
-                    statusEl.classList.remove('text-yellow-400');
-                    statusEl.classList.add('text-red-400');
-                }
-            }
-            
-            function stopAllCameras() {
-                [startVideoStream, endVideoStream].forEach(stream => {
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                });
-                startVideoStream = null;
-                endVideoStream = null;
-                
-                [startVideo, endVideo].forEach(v => {
-                    if (v) v.srcObject = null;
-                });
-                [startVideoIcon, endVideoIcon].forEach(i => {
-                    if (i) i.style.display = 'block';
-                });
-                
-                btnEnableStartCamera.classList.remove('hidden');
-                btnDoStartVerify.classList.add('hidden');
-                btnEnableEndCamera.classList.remove('hidden');
-                btnDoVerify.classList.add('hidden');
+      <!-- MODAL: LIVENESS -->
+      <div id="modal-verify" class="hidden fixed inset-0 bg-white/95 backdrop-blur-2xl z-[120] flex items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center space-y-10">
+          <div class="space-y-2">
+            <h2 class="text-3xl font-black text-blue-900">Security Check</h2>
+            <p class="text-sm text-slate-500">Complete facial expression steps first, then capture for comparison.</p>
+          </div>
+          <div class="w-72 h-72 mx-auto bg-slate-100 rounded-full border-8 border-blue-50 overflow-hidden relative shadow-[0_20px_50px_rgba(14,165,233,0.3)]">
+            <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+            <div class="scan-line"></div>
+          </div>
+          <canvas id="verify-canvas" class="hidden"></canvas>
+          <p id="verify-step" class="text-[11px] font-black text-blue-500 uppercase tracking-[0.18em]">Expression step pending</p>
+          <p id="verify-status" class="text-sm font-black text-blue-600 uppercase tracking-[0.2em]">Ready to verify</p>
+          <div class="flex justify-center gap-4">
+            <button type="button" id="btn-verify-capture" class="btn-primary px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs hidden">Capture & Verify</button>
+            <button type="button" id="btn-cancel-verify" class="text-rose-500 font-black uppercase tracking-widest text-xs">Abort & Return</button>
+          </div>
+        </div>
+      </div>
 
-                // Reset status texts
-                startVerifyStatus.textContent = "Please enable your camera";
-                startVerifyStatus.className = 'text-lg text-cyan-400';
-                verifyStatus.textContent = "Please enable your camera";
-                verifyStatus.className = 'text-lg text-cyan-400';
-            }
-            
-            // --- DATA & FORM LOGIC ---
-            async function loadNigeriaData() {
-                try {
-                    const response = await fetch('https://gist.githubusercontent.com/devhammed/0bb9eeac9ff22c895100d072f489dc98/raw/a7b19911407a89947c452339fee59f9335dc8225/nigeria-state-and-lgas.json');
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    nigeriaData = await response.json();
-                    
-                    stateSelect.innerHTML = '<option value="" disabled selected>Select a state...</option>';
-                    nigeriaData.forEach(state => {
-                        const option = document.createElement('option');
-                        option.value = state.state;
-                        option.textContent = state.state;
-                        stateSelect.appendChild(option);
-                    });
-                } catch (err) {
-                    console.error("Failed to load Nigeria data:", err);
-                    stateSelect.innerHTML = '<option value="" disabled selected>Failed to load states</option>';
-                    showGlobalError("Failed to load location data.");
-                }
-            }
-            
-            function populateLGAs() {
-                const selectedStateName = stateSelect.value;
-                const stateData = nigeriaData.find(s => s.state === selectedStateName);
-                
-                lgaSelect.innerHTML = '<option value="" disabled selected>Select LGA...</option>';
-                if (stateData) {
-                    stateData.lgas.forEach(lga => {
-                        const option = document.createElement('option');
-                        option.value = lga;
-                        option.textContent = lga;
-                        lgaSelect.appendChild(option);
-                    });
-                    lgaSelect.disabled = false;
-                } else {
-                    lgaSelect.disabled = true;
-                }
-            }
-            
-            function addPhoneInput() {
-                const container = document.getElementById('phone-numbers-container');
-                const newRow = document.createElement('div');
-                newRow.className = 'phone-input-row';
-                
-                const newInp = document.createElement('input');
-                newInp.type = 'tel';
-                newInp.className = 'form-input phone-input';
-                newInp.pattern = '[0-9]{11}';
-                newInp.title = 'Phone number must be exactly 11 digits.';
-                newInp.maxLength = 11;
-                newInp.placeholder = '08012345678';
-                
-                ['mt-1', 'block', 'w-full', 'bg-white/20', 'backdrop-blur-sm', 
-                 'border-0', 'rounded-lg', 'py-3', 'px-4', 'text-white', 
-                 'placeholder-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-white', 'text-black'].forEach(c => newInp.classList.add(c));
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'remove-phone-btn';
-                removeBtn.textContent = 'X';
-                removeBtn.onclick = () => {
-                    container.removeChild(newRow);
-                };
-                
-                newRow.appendChild(newInp);
-                newRow.appendChild(removeBtn);
-                container.appendChild(newRow);
-            }
+      <!-- MODAL: PRE-LOG PHOTO -->
+      <div id="modal-prelog-photo" class="hidden fixed inset-0 bg-white/95 backdrop-blur-2xl z-[115] flex items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center space-y-8">
+          <div class="space-y-2">
+            <h2 class="text-2xl font-black text-blue-900">Pre-Log Face Capture</h2>
+            <p class="text-sm text-slate-500">Capture your photo before saving this meetup log.</p>
+          </div>
+          <div class="w-72 h-72 mx-auto bg-slate-100 rounded-full border-8 border-blue-50 overflow-hidden shadow-[0_20px_50px_rgba(14,165,233,0.3)]">
+            <video id="prelog-webcam" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+          </div>
+          <canvas id="prelog-canvas" class="hidden"></canvas>
+          <p id="prelog-status" class="text-sm font-black text-blue-600 uppercase tracking-[0.2em]">Camera ready</p>
+          <div class="flex justify-center gap-4">
+            <button type="button" id="btn-capture-prelog" class="btn-primary px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs">Capture & Save Log</button>
+            <button type="button" id="btn-cancel-prelog" class="text-rose-500 font-black uppercase tracking-widest text-xs">Cancel</button>
+          </div>
+        </div>
+      </div>
 
-            // --- CORE APP FLOW ---
-            function updateHomeScreen() {
-                if (activeMeetup) {
-                    activeMeetupNameHome.textContent = `with ${activeMeetup.firstName} ${activeMeetup.lastName}`;
-                    activeMeetupCardHome.style.display = 'block';
-                    noActiveMeetup.style.display = 'none';
-                } else {
-                    activeMeetupCardHome.style.display = 'none';
-                    noActiveMeetup.style.display = 'block';
-                    logMeetupForm.reset();
-                    strangerImageFilename.textContent = 'No file chosen';
-                    supportImagesFilename.textContent = 'No files chosen';
-                    lgaSelect.innerHTML = '<option value="" disabled selected>Select state first</option>';
-                    lgaSelect.disabled = true;
-                    document.querySelectorAll('#phone-numbers-container .phone-input-row:not(:first-child)').forEach(row => row.remove());
-                    document.querySelectorAll('.phone-input').forEach(inp => inp.classList.remove('input-error'));
-                }
-            }
+      <!-- FIXED BOTTOM NAV -->
+      <nav id="app-nav" class="hidden h-20 bg-white border-t border-blue-50 fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex items-center justify-around px-8 z-[80]">
+        <button type="button" data-screen="screen-home" class="nav-btn-el active nav-item flex flex-col items-center gap-1">
+          <i class="ph-bold ph-house text-2xl"></i>
+          <span class="text-[9px] font-black uppercase">Home</span>
+        </button>
 
-            function startTimer() {
-                const endTime = Date.now() + DURATION;
-                activeMeetup.endTime = endTime; 
-                if (timerInterval) clearInterval(timerInterval);
-                timerInterval = setInterval(() => {
-                    const now = Date.now();
-                    const timeLeft = activeMeetup.endTime - now;
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        timerDisplay.textContent = "00:00:00";
-                        alertMessage.style.display = 'block';
-                        timerDisplay.classList.add('text-red-500');
-                        return;
-                    }
-                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                    timerDisplay.textContent = 
-                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                }, 1000);
-            }
+        <button type="button" id="nav-log" class="nav-btn-el nav-item flex flex-col items-center gap-1">
+          <div class="bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center -mt-12 shadow-2xl border-4 border-white transition-all active:scale-90">
+            <i class="ph-bold ph-shield-check text-2xl"></i>
+          </div>
+          <span class="text-[9px] font-black uppercase mt-1">Log</span>
+        </button>
 
-            async function handleSubmitLogForm(e) {
-                e.preventDefault();
-                hideGlobalError(); // Clear previous errors
-                
-                // --- Phone Validation ---
-                const phoneInputs = document.querySelectorAll('.phone-input');
-                const phones = [];
-                let phoneError = false;
-                phoneInputs.forEach(input => {
-                    const phone = input.value;
-                    if (phone.trim() !== '') {
-                        if (!/^[0-9]{11}$/.test(phone)) {
-                            phoneError = true;
-                            input.classList.add('input-error');
-                        } else {
-                            input.classList.remove('input-error');
-                            phones.push(phone);
-                        }
-                    } else {
-                         input.classList.remove('input-error');
-                    }
-                });
+        <button type="button" data-screen="screen-profile" class="nav-btn-el nav-item flex flex-col items-center gap-1">
+          <i class="ph-bold ph-user-circle text-2xl"></i>
+          <span class="text-[9px] font-black uppercase">Profile</span>
+        </button>
+      </nav>
 
-                if (phoneError) {
-                    showGlobalError("All phone numbers must be exactly 11 digits.");
-                    return; // Stop form submission
-                }
-                
-                // --- Lazy load models ---
-                await loadFaceApiModels(); 
-                
-                activeMeetup = {
-                    firstName: document.getElementById('meetup-first-name').value,
-                    lastName: document.getElementById('meetup-last-name').value,
-                    nickname: document.getElementById('meetup-nickname').value || 'Not provided',
-                    phones: phones.length > 0 ? phones : ['Not provided'],
-                    friends: document.getElementById('meetup-friends').value || 'Not provided',
-                    strangerImage: strangerImageInput.files.length > 0 ? strangerImageInput.files[0].name : 'Not provided',
-                    placeType: document.getElementById('meetup-place-type').value,
-                    address: document.getElementById('meetup-address').value,
-                    state: document.getElementById('meetup-state').value,
-                    lga: document.getElementById('meetup-lga').value,
-                    notes: document.getElementById('meetup-notes').value || 'None',
-                    supportImages: supportImagesInput.files.length > 0 
-                        ? Array.from(supportImagesInput.files).map(f => f.name) 
-                        : ['Not provided'],
-                    progressUpdates: []
-                };
-                showModal(startVerifyModal);
-            }
+    </div>
+  </div>
 
-            function confirmStartMeetup() {
-                startVerifyStatus.textContent = "Snapping photo...";
-                startVerifyStatus.classList.remove('text-cyan-400');
-                startVerifyStatus.classList.add('text-yellow-400');
-                btnDoStartVerify.disabled = true;
-                
-                try {
-                    const context = startSnapshotCanvas.getContext('2d');
-                    startSnapshotCanvas.width = startVideo.videoWidth;
-                    startSnapshotCanvas.height = startVideo.videoHeight;
-                    context.drawImage(startVideo, 0, 0, startSnapshotCanvas.width, startSnapshotCanvas.height);
-                    console.log("Snapshot taken!");
-                } catch (err) {
-                    console.error("Failed to take snapshot:", err);
-                    showGlobalError("Failed to capture snapshot. Continuing anyway.");
-                }
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const ALL_STATES = [
+        "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+        "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Federal Capital Territory",
+        "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara",
+        "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
+        "Sokoto", "Taraba", "Yobe", "Zamfara"
+      ];
 
-                setTimeout(() => {
-                    startVerifyStatus.textContent = "Snapshot Saved! Starting timer...";
-                    startVerifyStatus.classList.add('text-green-400');
+      let nigeriaData = {
+        "Abia": ["Aba North","Aba South","Umuahia North"],
+        "Adamawa": ["Yola North","Yola South"],
+        "Akwa Ibom": ["Uyo","Eket"],
+        "Anambra": ["Awka South","Onitsha"],
+        "Lagos": ["Ikeja","Alimosho","Lekki","Surulere"],
+        "Kaduna": ["Kaduna North","Kaduna South"],
+        "Borno": ["Maiduguri","Jere"],
+        "Federal Capital Territory": ["AMAC","Bwari"]
+      };
 
-                    setTimeout(() => {
-                        document.getElementById('details-firstName').textContent = activeMeetup.firstName;
-                        document.getElementById('details-lastName').textContent = activeMeetup.lastName;
-                        document.getElementById('details-nickname').textContent = activeMeetup.nickname;
-                        document.getElementById('details-phone').textContent = activeMeetup.phones.join(', ');
-                        document.getElementById('details-friends').textContent = activeMeetup.friends;
-                        document.getElementById('details-stranger-image').textContent = activeMeetup.strangerImage;
-                        document.getElementById('details-place-type').textContent = activeMeetup.placeType;
-                        document.getElementById('details-address').textContent = activeMeetup.address;
-                        document.getElementById('details-state').textContent = activeMeetup.state;
-                        document.getElementById('details-lga').textContent = activeMeetup.lga;
-                        document.getElementById('details-notes').textContent = activeMeetup.notes;
-                        document.getElementById('details-support-images').textContent = activeMeetup.supportImages.join(', ');
+      const socialProofEvents = [
+        "User in Kaduna just verified safely.",
+        "Tunde in Lagos just started a log.",
+        "Jessica in Abuja logged a meetup.",
+        "A traveler in Maiduguri is protected."
+      ];
 
-                        timerDisplay.textContent = "48:00:00";
-                        timerDisplay.classList.remove('text-red-500');
-                        alertMessage.style.display = 'none';
-                        
-                        startTimer();
-                        updateHomeScreen();
-                        hideModal(startVerifyModal);
-                        showScreen(activeMeetupScreen);
-                        
-                        btnDoStartVerify.disabled = false;
-                        renderProgressUpdates();
+      // Package rules (NO upfront selection)
+      // Basic = details only
+      // Standard = + GPS
+      // Confidence Plus = + GPS + pictures
+      const PACKAGE_RANK = { "Basic": 1, "Standard": 2, "Confidence Plus": 3 };
 
-                    }, 1000);
-                }, 500); 
-            }
-            
-            async function performLivenessCheck() {
-                verifyStatus.textContent = "Detecting face...";
-                verifyStatus.classList.remove('text-cyan-400', 'text-red-400');
-                verifyStatus.classList.add('text-yellow-400');
-                btnDoVerify.disabled = true;
+      let unlockedPackage = "Basic"; // start Basic (change after "I've Paid")
+      let pendingUpgradeTarget = null;
 
-                if (!faceApiLoaded) {
-                    verifyStatus.textContent = "Models not loaded. Simulating check.";
-                    setTimeout(endMeetup, 2000); // Simulate on failure
-                    return;
-                }
-                
-                try {
-                    const detection = await faceapi.detectSingleFace(endVideo, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-                    
-                    if (detection) {
-                        verifyStatus.textContent = "Face detected. Please blink.";
-                        
-                        // This is a simple simulation of a blink check.
-                        setTimeout(() => {
-                            verifyStatus.textContent = "Liveness Confirmed!";
-                            verifyStatus.classList.remove('text-yellow-400');
-                            verifyStatus.classList.add('text-green-400');
-                            setTimeout(endMeetup, 1500); // Proceed to end meetup
-                        }, 2500); 
-                        
-                    } else {
-                        verifyStatus.textContent = "No face detected. Please try again.";
-                        verifyStatus.classList.remove('text-yellow-400');
-                        verifyStatus.classList.add('text-red-400');
-                        btnDoVerify.disabled = false;
-                    }
-                } catch (err) {
-                    console.error("Liveness check failed:", err);
-                    verifyStatus.textContent = "Verification failed. Simulating success.";
-                    setTimeout(endMeetup, 2000);
-                }
-            }
+      let currentActive = null;
+      let timerInt = null;
+      let gpsLogInterval = null;
+      const SCREEN_DURATION = 48 * 60 * 60 * 1000;
+      const GPS_LOG_INTERVAL_MS = 10 * 60 * 1000;
+      let preLogImageDataUrl = "";
+      let pendingMeetupData = null;
+      let simulatedUsers = [];
+      let usersPulseInt = null;
+      let mapRoot = null;
+      let polygonSeries = null;
+      let dotSeries = null;
+      let stateGeometryPool = [];
+      let signedInUser = { name: "", phone: "" };
+      let livenessStepIndex = 0;
+      let livenessAutoTimer = null;
+      let faceModelsLoaded = false;
+      let livenessSession = null;
+      let cameraPermissionState = "prompt";
+      const LIVENESS_STEPS = [
+        "Smile clearly at the camera",
+        "Turn your face slightly left",
+        "Turn your face slightly right"
+      ];
 
-            function endMeetup() {
-                if (timerInterval) clearInterval(timerInterval);
-                timerInterval = null;
-                activeMeetup = null;
-                
-                hideModal(verifyModal); 
-                showScreen(successScreen); 
-                
-                btnDoVerify.disabled = false;
-                
-                updateHomeScreen();
-                
-                setTimeout(() => showScreen(homeScreen), 4000); 
-            }
+      // Social proof controller
+      let toastInterval = null;
+      let toastVisibleTimeout = null;
+      const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
 
-            function addProgressUpdate() {
-                const text = document.getElementById('update-text').value;
-                const photoFile = updatePhotoInput.files[0];
-                const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                if (!text && !photoFile) return;
-                if (text) activeMeetup.progressUpdates.push({ type: 'text', content: text, time: timestamp });
-                if (photoFile) activeMeetup.progressUpdates.push({ type: 'photo', content: photoFile.name, time: timestamp });
-                document.getElementById('update-text').value = '';
-                updatePhotoInput.value = '';
-                updatePhotoFilename.textContent = 'No file chosen';
-                hideModal(addUpdateModal);
-                renderProgressUpdates();
-            }
+      const stateSel = document.getElementById('state-select');
+      const lgaSel = document.getElementById('lga-select');
 
-            function renderProgressUpdates() {
-                if (!activeMeetup || activeMeetup.progressUpdates.length === 0) {
-                    noUpdatesMessage.style.display = 'block';
-                    progressUpdatesList.innerHTML = '';
-                    progressUpdatesList.appendChild(noUpdatesMessage);
-                    return;
-                }
-                noUpdatesMessage.style.display = 'none';
-                progressUpdatesList.innerHTML = ''; 
-                activeMeetup.progressUpdates.forEach(update => {
-                    const updateEl = document.createElement('div');
-                    updateEl.className = 'bg-black/40 p-3 rounded-lg flex items-start space-x-3';
-                    let icon = (update.type === 'text') 
-                        ? '<i class="ph ph-chat-text text-xl text-blue-300 flex-shrink-0 mt-1"></i>'
-                        : '<i class="ph ph-image text-xl text-green-300 flex-shrink-0 mt-1"></i>';
-                    let content = (update.type === 'text')
-                        ? `<p class="text-white whitespace-pre-wrap">${update.content}</p>`
-                        : `<p class="text-gray-200 italic">${update.content}</p>`;
-                    updateEl.innerHTML = `
-                        ${icon}
-                        <div class="flex-1">
-                            ${content}
-                            <span class="text-xs text-gray-400 block text-right">${update.time}</span>
-                        </div>`;
-                    progressUpdatesList.prepend(updateEl);
-                });
-            }
+      function sanitizeDigitsOnly(input) {
+        input.value = input.value.replace(/\D/g, '');
+      }
 
-            // --- EVENT LISTENERS ---
-            btnShowLogForm.addEventListener('click', () => showScreen(logFormScreen));
-            btnBackHome.addEventListener('click', () => showScreen(homeScreen));
-            btnShowTrust.addEventListener('click', () => showScreen(trustScreen));
-            btnBackHomeFromTrust.addEventListener('click', () => showScreen(homeScreen));
-            stateSelect.addEventListener('change', populateLGAs);
-            btnAddPhone.addEventListener('click', addPhoneInput);
-            errorClose.addEventListener('click', hideGlobalError);
-            
-            activeMeetupCardHome.addEventListener('click', () => {
-                if (activeMeetup) showScreen(activeMeetupScreen);
-            });
+      function normalizeKey(key) {
+        return String(key || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .replace(/[^a-z0-9_]/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_+|_+$/g, "");
+      }
 
-            logMeetupForm.addEventListener('submit', handleSubmitLogForm);
-            
-            btnEnableStartCamera.addEventListener('click', () => startVerificationCamera('start'));
-            btnDoStartVerify.addEventListener('click', confirmStartMeetup);
-            btnCancelStartVerify.addEventListener('click', () => hideModal(startVerifyModal));
-            
-            btnShowVerify.addEventListener('click', async () => {
-                await loadFaceApiModels(); // Lazy load models
-                showModal(verifyModal);
-            });
-            btnEnableEndCamera.addEventListener('click', () => startVerificationCamera('end'));
-            btnDoVerify.addEventListener('click', performLivenessCheck);
-            btnCancelVerify.addEventListener('click', () => hideModal(verifyModal));
+      function extractDynamicFormData(formEl) {
+        const out = {};
+        formEl.querySelectorAll('input, select, textarea').forEach((el) => {
+          if (!el.id && !el.name) return;
+          if (el.type === "button" || el.type === "submit" || el.type === "reset") return;
+          const rawKey = el.name || el.id;
+          const key = normalizeKey(rawKey);
+          if (!key) return;
 
-            btnShowAddUpdate.addEventListener('click', () => showModal(addUpdateModal));
-            btnCancelUpdate.addEventListener('click', () => {
-                hideModal(addUpdateModal);
-                document.getElementById('update-text').value = '';
-                updatePhotoInput.value = '';
-                updatePhotoFilename.textContent = 'No file chosen';
-            });
-            btnSubmitUpdate.addEventListener('click', addProgressUpdate);
-
-            // --- INITIALIZATION ---
-            loadNigeriaData(); // Load state/LGA data on startup
-            updateHomeScreen();
-            showScreen(homeScreen); 
+          if (el.type === "file") {
+            const files = el.files ? Array.from(el.files).map((f) => f.name) : [];
+            out[key] = el.multiple ? files : (files[0] || "");
+            return;
+          }
+          if ((el.type === "checkbox" || el.type === "radio")) {
+            out[key] = !!el.checked;
+            return;
+          }
+          out[key] = typeof el.value === "string" ? el.value.trim() : el.value;
         });
-    </script>
+        return out;
+      }
 
+      async function sendToBackend(payload) {
+        const res = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+        let json = {};
+        try { json = text ? JSON.parse(text) : {}; } catch (_) { json = { raw: text }; }
+        if (!res.ok || (json.status && String(json.status).toLowerCase() !== "success")) {
+          throw new Error(json.message || "Backend request failed");
+        }
+        return json;
+      }
+
+      function safeGetCreatedId(resp) {
+        return resp?.id || resp?.data?.id || resp?.data?.[0]?.id || "";
+      }
+
+      function removeFieldError(input) {
+        if (!input) return;
+        input.classList.remove('input-error');
+        const next = input.nextElementSibling;
+        if (next && next.classList.contains('field-error')) next.remove();
+      }
+
+      function setFieldError(input, message) {
+        if (!input) return;
+        removeFieldError(input);
+        input.classList.add('input-error');
+        const err = document.createElement('p');
+        err.className = 'field-error';
+        err.innerText = message;
+        input.insertAdjacentElement('afterend', err);
+      }
+
+      function validateRequired(input, message) {
+        removeFieldError(input);
+        const value = (input.value || '').trim();
+        if (!value) {
+          setFieldError(input, message);
+          return false;
+        }
+        return true;
+      }
+
+      function validatePhoneIfPresent(input, required = false) {
+        removeFieldError(input);
+        sanitizeDigitsOnly(input);
+        if (!input.value && !required) return true;
+        if (!input.value && required) {
+          setFieldError(input, "Phone number is required");
+          return false;
+        }
+        if (input.value.length !== 11) {
+          setFieldError(input, "Phone must be exactly 11 digits");
+          return false;
+        }
+        return true;
+      }
+
+      function validateAuthForm() {
+        const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
+        let valid = true;
+        const name = document.getElementById('auth-name');
+        const phone = document.getElementById('auth-phone');
+        const pin = document.getElementById('auth-pin');
+        if (isSignup) valid = validateRequired(name, "Full name is required") && valid;
+        valid = validatePhoneIfPresent(phone, true) && valid;
+        removeFieldError(pin);
+        sanitizeDigitsOnly(pin);
+        if (!pin.value || pin.value.length !== 4) {
+          setFieldError(pin, "PIN must be 4 digits");
+          valid = false;
+        }
+        return valid;
+      }
+
+      function validateProfileForm() {
+        let valid = true;
+        valid = validateRequired(document.getElementById('fpc-name'), "FPC name is required") && valid;
+        valid = validatePhoneIfPresent(document.getElementById('fpc-phone'), true) && valid;
+        valid = validateRequired(document.getElementById('fpc-relation'), "Relationship is required") && valid;
+        valid = validateRequired(document.getElementById('fpc-priority'), "Priority is required") && valid;
+        return valid;
+      }
+
+      function validateLogForm() {
+        let valid = true;
+        valid = validateRequired(document.getElementById('place-type'), "Place type is required") && valid;
+        valid = validateRequired(document.getElementById('address'), "Address/Location/Landmark is required") && valid;
+        valid = validateRequired(document.getElementById('state-select'), "State is required") && valid;
+        valid = validateRequired(document.getElementById('lga-select'), "LGA is required") && valid;
+        document.querySelectorAll('.phone-entry').forEach((input) => {
+          valid = validatePhoneIfPresent(input, false) && valid;
+        });
+        return valid;
+      }
+
+      function titleCaseSlug(value) {
+        return String(value || '')
+          .replace(/[-_]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
+      }
+
+      function normalizeNigeriaPayload(payload) {
+        const normalized = {};
+        if (Array.isArray(payload)) {
+          payload.forEach((entry) => {
+            const state = entry.state || entry.name || entry.State || entry.Name;
+            const lgas = entry.lgas || entry.lga || entry.LGAs || entry.locals || [];
+            const prettyState = titleCaseSlug(state);
+            if (prettyState) {
+              normalized[prettyState] = Array.isArray(lgas) ? lgas.map(titleCaseSlug) : [];
+            }
+          });
+        } else if (payload && typeof payload === 'object') {
+          Object.keys(payload).forEach((key) => {
+            const prettyState = titleCaseSlug(key);
+            normalized[prettyState] = Array.isArray(payload[key]) ? payload[key].map(titleCaseSlug) : [];
+          });
+        }
+        return normalized;
+      }
+
+      function mergeNigeriaDataWithStateList(data) {
+        const out = {};
+        ALL_STATES.forEach((state) => {
+          out[state] = Array.isArray(data[state]) ? [...new Set(data[state])].sort() : [];
+        });
+        Object.keys(data).forEach((state) => {
+          if (!out[state]) out[state] = Array.isArray(data[state]) ? [...new Set(data[state])].sort() : [];
+        });
+        return out;
+      }
+
+      function populateStateOptions() {
+        stateSel.innerHTML = '<option value="">State *</option>';
+        Object.keys(nigeriaData).sort().forEach((s) => {
+          const opt = document.createElement('option');
+          opt.value = s;
+          opt.innerText = s;
+          stateSel.appendChild(opt);
+        });
+      }
+
+      async function loadNigeriaData() {
+        const sources = [
+          "https://raw.githubusercontent.com/afeibukun/nigerian-state-lgas-wards-polling-units/refs/heads/main/states-and-lgas.json",
+          "https://raw.githubusercontent.com/kennymartins/nigerian-states-LGAs/master/states-and-lgas.json",
+          "https://raw.githubusercontent.com/Temmiecode/nigeria-address-data/main/src/nigeriaAddressData.json"
+        ];
+        for (const url of sources) {
+          try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) continue;
+            const payload = await res.json();
+            const normalized = normalizeNigeriaPayload(payload);
+            if (Object.keys(normalized).length > 0) {
+              nigeriaData = mergeNigeriaDataWithStateList(normalized);
+              populateStateOptions();
+              return;
+            }
+          } catch (_) {
+            // try next source
+          }
+        }
+        nigeriaData = mergeNigeriaDataWithStateList(nigeriaData);
+        populateStateOptions();
+      }
+
+      function ensureMapInitialized() {
+        if (mapRoot || !window.am5 || !window.am5map || !window.am5geodata_nigeriaLow) return;
+        mapRoot = am5.Root.new("nigeria-map-chart");
+        mapRoot._logo?.dispose();
+
+        const chart = mapRoot.container.children.push(
+          am5map.MapChart.new(mapRoot, {
+            panX: "none",
+            panY: "none",
+            wheelX: "none",
+            wheelY: "none",
+            projection: am5map.geoMercator()
+          })
+        );
+
+        polygonSeries = chart.series.push(
+          am5map.MapPolygonSeries.new(mapRoot, {
+            geoJSON: am5geodata_nigeriaLow,
+            valueField: "value",
+            calculateAggregates: true
+          })
+        );
+
+        polygonSeries.mapPolygons.template.setAll({
+          stroke: am5.color(0x60a5fa),
+          strokeWidth: 1,
+          interactive: true,
+          tooltipHTML: "{tooltipHTML}"
+        });
+        polygonSeries.mapPolygons.template.adapters.add("fill", (fill, target) => {
+          const v = target.dataItem?.dataContext?.value || 0;
+          if (v >= 500) return am5.color(0x93c5fd);
+          if (v >= 200) return am5.color(0xbfdbfe);
+          return am5.color(0xdbeafe);
+        });
+
+        dotSeries = chart.series.push(
+          am5map.MapPointSeries.new(mapRoot, {
+            latitudeField: "lat",
+            longitudeField: "lng"
+          })
+        );
+        dotSeries.bullets.push((root, dataItem) => {
+          const yellow = dataItem.dataContext?.status === "yellow";
+          const pulseDuration = 700 + Math.floor(Math.random() * 1200);
+          const pulseStartScale = 0.78 + Math.random() * 0.28;
+          const pulseEndScale = yellow ? (1.2 + Math.random() * 0.35) : (1.08 + Math.random() * 0.24);
+          const pulseStartOpacity = yellow ? (0.45 + Math.random() * 0.25) : (0.18 + Math.random() * 0.2);
+          const pulseEndOpacity = yellow ? 1 : (0.58 + Math.random() * 0.28);
+          const circle = am5.Circle.new(root, {
+            radius: yellow ? 1.35 : 1.0,
+            fill: yellow ? am5.color(0xf59e0b) : am5.color(0x22c55e),
+            fillOpacity: yellow ? 0.8 : 0.45,
+            strokeOpacity: 0
+          });
+          circle.animate({ key: "scale", from: pulseStartScale, to: pulseEndScale, duration: pulseDuration, loops: Infinity });
+          circle.animate({ key: "fillOpacity", from: pulseStartOpacity, to: pulseEndOpacity, duration: pulseDuration, loops: Infinity });
+          return am5.Bullet.new(root, { sprite: circle });
+        });
+      }
+
+      function pointInRing(lon, lat, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const xi = ring[i][0], yi = ring[i][1];
+          const xj = ring[j][0], yj = ring[j][1];
+          const intersects = ((yi > lat) !== (yj > lat)) &&
+            (lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || 0.0000001) + xi);
+          if (intersects) inside = !inside;
+        }
+        return inside;
+      }
+
+      function pointInPolygonWithHoles(lon, lat, polygonCoords) {
+        if (!polygonCoords?.length) return false;
+        if (!pointInRing(lon, lat, polygonCoords[0])) return false;
+        for (let i = 1; i < polygonCoords.length; i += 1) {
+          if (pointInRing(lon, lat, polygonCoords[i])) return false;
+        }
+        return true;
+      }
+
+      function polygonBBox(outerRing) {
+        let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+        outerRing.forEach((pt) => {
+          const lon = pt[0];
+          const lat = pt[1];
+          if (lon < minLon) minLon = lon;
+          if (lon > maxLon) maxLon = lon;
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+        });
+        return { minLon, maxLon, minLat, maxLat };
+      }
+
+      function buildStateGeometryPool() {
+        if (stateGeometryPool.length || !window.am5geodata_nigeriaLow?.features) return;
+        const pool = [];
+        am5geodata_nigeriaLow.features.forEach((feature) => {
+          const name = feature?.properties?.name || feature?.id || "Unknown";
+          const geometry = feature?.geometry;
+          if (!geometry) return;
+          if (geometry.type === "Polygon") {
+            const coords = geometry.coordinates;
+            if (coords?.[0]?.length) {
+              pool.push({ name, id: feature.id, coords, bbox: polygonBBox(coords[0]) });
+            }
+          } else if (geometry.type === "MultiPolygon") {
+            geometry.coordinates.forEach((polyCoords) => {
+              if (polyCoords?.[0]?.length) {
+                pool.push({ name, id: feature.id, coords: polyCoords, bbox: polygonBBox(polyCoords[0]) });
+              }
+            });
+          }
+        });
+        stateGeometryPool = pool;
+      }
+
+      function randomPointInsideState(stateShape, maxAttempts = 80) {
+        for (let i = 0; i < maxAttempts; i += 1) {
+          const lon = stateShape.bbox.minLon + Math.random() * (stateShape.bbox.maxLon - stateShape.bbox.minLon);
+          const lat = stateShape.bbox.minLat + Math.random() * (stateShape.bbox.maxLat - stateShape.bbox.minLat);
+          if (pointInPolygonWithHoles(lon, lat, stateShape.coords)) {
+            return { lng: lon, lat };
+          }
+        }
+        return null;
+      }
+
+      function buildSimulatedUsers(total = 2600) {
+        buildStateGeometryPool();
+        const users = [];
+        let guard = 0;
+        while (users.length < total && guard < total * 50) {
+          guard += 1;
+          if (!stateGeometryPool.length) break;
+          const stateShape = stateGeometryPool[Math.floor(Math.random() * stateGeometryPool.length)];
+          const point = randomPointInsideState(stateShape);
+          if (!point) continue;
+          users.push({
+            lat: point.lat,
+            lng: point.lng,
+            state: stateShape.name,
+            remainingMins: Math.floor(Math.random() * (48 * 60))
+          });
+        }
+        simulatedUsers = users;
+      }
+
+      function computeStateTopCombos() {
+        const out = {};
+        simulatedUsers.forEach((u) => {
+          if (!out[u.state]) out[u.state] = { total: 0, logged: 0, almost: 0 };
+          out[u.state].total += 1;
+          if (u.remainingMins <= 120) out[u.state].almost += 1;
+          else out[u.state].logged += 1;
+        });
+        return out;
+      }
+
+      function renderMap() {
+        if (!polygonSeries || !dotSeries) return;
+        const stateIdMap = {
+          "Lagos": "NG-LA",
+          "Abia": "NG-AB",
+          "Adamawa": "NG-AD",
+          "Delta": "NG-DE",
+          "Kaduna": "NG-KD",
+          "Ebonyi": "NG-EB",
+          "Enugu": "NG-EN",
+          "Rivers": "NG-RI"
+        };
+        const stateStats = computeStateTopCombos();
+        const mapData = [];
+        Object.entries(stateIdMap).forEach(([stateName, geoId]) => {
+          const info = stateStats[stateName];
+          if (!info) {
+            mapData.push({
+              id: geoId,
+              name: stateName,
+              value: 0,
+              tooltipHTML: `<strong>${stateName}</strong><br>No active users`
+            });
+          } else {
+            mapData.push({
+              id: geoId,
+              name: stateName,
+              value: info.total,
+              tooltipHTML: `<strong>${stateName}</strong><br>Total: ${info.total}<br>Green: ${info.logged}<br>Yellow: ${info.almost}`
+            });
+          }
+        });
+        polygonSeries.data.setAll(mapData);
+
+        const dots = simulatedUsers.map((u) => ({
+          lat: u.lat,
+          lng: u.lng,
+          status: u.remainingMins <= 120 ? "yellow" : "green"
+        })).sort((a, b) => (a.status === "yellow" ? 1 : 0) - (b.status === "yellow" ? 1 : 0));
+        dotSeries.data.setAll(dots);
+
+        const almostCount = dots.filter((d) => d.status === "yellow").length;
+        const loggedCount = dots.length - almostCount;
+        document.getElementById('active-users-count').innerText = `${dots.length.toLocaleString()} Users`;
+        document.getElementById('logged-users-count').innerText = loggedCount.toLocaleString();
+        document.getElementById('almost-users-count').innerText = almostCount.toLocaleString();
+      }
+
+      function startUsersMapPulse() {
+        ensureMapInitialized();
+        if (!simulatedUsers.length) buildSimulatedUsers();
+        renderMap();
+        if (usersPulseInt) clearInterval(usersPulseInt);
+        usersPulseInt = setInterval(() => {
+          simulatedUsers.forEach((u) => {
+            if (u.remainingMins > 0) u.remainingMins -= 1;
+          });
+          renderMap();
+        }, 15000);
+      }
+
+      function startSocialProof() {
+        stopSocialProof(); // ensure single instance
+        toastInterval = setInterval(() => {
+          const toast = document.getElementById('social-proof-toast');
+          const txt = document.getElementById('toast-text');
+          txt.innerText = socialProofEvents[Math.floor(Math.random() * socialProofEvents.length)];
+          toast.classList.add('show');
+          clearTimeout(toastVisibleTimeout);
+          toastVisibleTimeout = setTimeout(() => toast.classList.remove('show'), 3200);
+        }, 12000);
+      }
+
+      function stopSocialProof() {
+        const toast = document.getElementById('social-proof-toast');
+        toast.classList.remove('show');
+        if (toastInterval) clearInterval(toastInterval);
+        toastInterval = null;
+        if (toastVisibleTimeout) clearTimeout(toastVisibleTimeout);
+        toastVisibleTimeout = null;
+      }
+
+      function screenWantsSocialProof(id) {
+        return (id === 'screen-landing' || id === 'screen-home');
+      }
+
+      function showScreen(id) {
+        document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
+        const target = document.getElementById(id);
+        if (target) {
+          target.style.display = 'flex';
+          target.scrollTop = 0;
+        }
+
+        // nav active states
+        document.querySelectorAll('.nav-btn-el').forEach(item => item.classList.remove('active'));
+        const navHome = document.querySelector('[data-screen="screen-home"]');
+        const navProfile = document.querySelector('[data-screen="screen-profile"]');
+        const navLog = document.getElementById('nav-log');
+
+        if (id === 'screen-home') navHome?.classList.add('active');
+        if (id === 'screen-profile') navProfile?.classList.add('active');
+        if (id === 'screen-log-form' || id === 'screen-active') navLog?.classList.add('active');
+
+        // social proof should not annoy / overlap key screens
+        if (screenWantsSocialProof(id)) startSocialProof();
+        else stopSocialProof();
+      }
+
+      function toggleAuthMode() {
+        const title = document.getElementById('auth-title');
+        const subtitle = document.getElementById('auth-subtitle');
+        const signup = document.getElementById('signup-fields');
+        const isSignup = title.innerText === 'Sign Up';
+        title.innerText = isSignup ? 'Welcome Back' : 'Sign Up';
+        subtitle.innerText = isSignup ? 'Sign in with your phone and PIN.' : 'Enter your details to proceed.';
+        signup.style.display = isSignup ? 'none' : 'block';
+      }
+
+      function openAuth(mode) {
+        const title = document.getElementById('auth-title');
+        const subtitle = document.getElementById('auth-subtitle');
+        const signup = document.getElementById('signup-fields');
+        const goSignup = mode === 'signup';
+        title.innerText = goSignup ? 'Sign Up' : 'Welcome Back';
+        subtitle.innerText = goSignup ? 'Enter your details to proceed.' : 'Sign in with your phone and PIN.';
+        signup.style.display = goSignup ? 'block' : 'none';
+        showScreen('screen-auth');
+      }
+
+      function needsUpgrade(requiredPkg) {
+        return PACKAGE_RANK[unlockedPackage] < PACKAGE_RANK[requiredPkg];
+      }
+
+      function triggerUpgrade(requiredPkg, feature) {
+        pendingUpgradeTarget = requiredPkg;
+        document.getElementById('upgrade-desc').innerHTML =
+          `The <span class="font-black text-blue-600">${requiredPkg}</span> Package is required for <span class="font-black">${feature}</span>.`;
+        document.getElementById('modal-upgrade').classList.remove('hidden');
+      }
+
+      function closeUpgradeModal() {
+        document.getElementById('modal-upgrade').classList.add('hidden');
+      }
+
+      function handleLogNav() {
+        if (currentActive) showScreen('screen-active');
+        else showScreen('screen-log-form');
+      }
+
+      function addPhoneField() {
+        const container = document.getElementById('phone-container');
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 mt-2';
+        div.innerHTML = `
+          <input type="tel" maxlength="11" placeholder="Secondary Phone" inputmode="numeric"
+                 class="form-input phone-entry" pattern="[0-9]{11}" minlength="11" oninput="this.value=this.value.replace(/\\D/g,'')">
+          <button type="button" class="text-rose-500 px-2" aria-label="Remove phone">
+            <i class="ph-bold ph-minus-circle text-xl"></i>
+          </button>`;
+        div.querySelector('button').onclick = () => div.remove();
+        container.appendChild(div);
+      }
+
+      // Location dropdowns
+      stateSel.onchange = (e) => {
+        lgaSel.innerHTML = '<option value="">LGA *</option>';
+        lgaSel.disabled = !e.target.value;
+        if (e.target.value) {
+          const lgas = Array.isArray(nigeriaData[e.target.value]) ? nigeriaData[e.target.value] : [];
+          lgas.sort().forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l; opt.innerText = l;
+            lgaSel.appendChild(opt);
+          });
+          if (!lgas.length) {
+            const opt = document.createElement('option');
+            opt.value = "lga_unavailable";
+            opt.innerText = "No LGA list loaded for this state";
+            lgaSel.appendChild(opt);
+          }
+        }
+      };
+
+      async function getCurrentGPS() {
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+        });
+      }
+
+      async function activateGPS() {
+        const status = document.getElementById('gps-status');
+        status.classList.remove('hidden');
+        status.innerText = "Fetching GPS...";
+        try {
+          const pos = await getCurrentGPS();
+          const { latitude, longitude } = pos.coords;
+          status.innerText = `GPS Saved: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          status.classList.remove('text-rose-600');
+          status.classList.add('text-emerald-600');
+          status.dataset.lat = latitude;
+          status.dataset.lng = longitude;
+        } catch (e) {
+          status.innerText = "GPS Failed (permission / timeout)";
+          status.classList.remove('text-emerald-600');
+          status.classList.add('text-rose-600');
+        }
+      }
+
+      async function logGPSPoint(reason) {
+        if (!currentActive) return;
+        try {
+          const pos = await getCurrentGPS();
+          const { latitude, longitude } = pos.coords;
+          currentActive.gpsLogs.push({
+            reason,
+            timestamp: new Date().toISOString(),
+            latitude,
+            longitude
+          });
+          const status = document.getElementById('gps-status');
+          status.classList.remove('hidden');
+          status.classList.remove('text-rose-600');
+          status.classList.add('text-emerald-600');
+          status.innerText = `GPS Logged: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          if (currentActive.meetupId) {
+            try {
+              await sendToBackend({
+                action: "update",
+                sheet: "Meetups",
+                filters: { id: currentActive.meetupId },
+                data: {
+                  last_gps: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                  last_gps_at: new Date().toISOString(),
+                  status: "ACTIVE_WATCH"
+                }
+              });
+            } catch (err) {
+              console.error("Meetup GPS update failed:", err);
+            }
+          }
+          renderMeetupDetails();
+        } catch (err) {
+          currentActive.gpsLogs.push({
+            reason,
+            timestamp: new Date().toISOString(),
+            error: "GPS unavailable"
+          });
+          if (currentActive.meetupId) {
+            try {
+              await sendToBackend({
+                action: "update",
+                sheet: "Meetups",
+                filters: { id: currentActive.meetupId },
+                data: {
+                  gps_error: "GPS unavailable",
+                  gps_error_at: new Date().toISOString()
+                }
+              });
+            } catch (updateErr) {
+              console.error("Meetup GPS error update failed:", updateErr);
+            }
+          }
+          renderMeetupDetails();
+        }
+      }
+
+      function startGPSLogging() {
+        clearInterval(gpsLogInterval);
+        logGPSPoint("start");
+        gpsLogInterval = setInterval(() => {
+          logGPSPoint("every_10_minutes");
+        }, GPS_LOG_INTERVAL_MS);
+      }
+
+      function stopGPSLogging() {
+        clearInterval(gpsLogInterval);
+        gpsLogInterval = null;
+      }
+
+      function collectMeetupDataFromForm() {
+        const dynamicFields = extractDynamicFormData(document.getElementById('log-form'));
+        const strangerFiles = inStranger.files ? Array.from(inStranger.files) : [];
+        const supportFiles = inSupport.files ? Array.from(inSupport.files) : [];
+        return {
+          fullName: `${document.getElementById('fname').value} ${document.getElementById('lname').value}`.trim(),
+          phones: [...document.querySelectorAll('.phone-entry')].map((el) => el.value).filter(Boolean),
+          nickname: document.getElementById('nickname').value.trim(),
+          friends: document.getElementById('friends').value.trim(),
+          placeType: document.getElementById('place-type').value,
+          address: document.getElementById('address').value.trim(),
+          state: document.getElementById('state-select').value,
+          lga: document.getElementById('lga-select').value,
+          extra: document.getElementById('info-extra').value.trim(),
+          strangerImageUrls: strangerFiles.map((f) => URL.createObjectURL(f)),
+          supportImageUrls: supportFiles.map((f) => URL.createObjectURL(f)),
+          dynamicFields
+        };
+      }
+
+      function renderActiveMeetupHomeCard() {
+        if (!currentActive?.details) return;
+        document.getElementById('active-meetup-name-display').innerText = currentActive.details.fullName || "Logging Active";
+      }
+
+      function renderMeetupDetails() {
+        const detailsEl = document.getElementById('active-meetup-details');
+        const updatesEl = document.getElementById('meetup-updates-list');
+        if (!currentActive?.details) {
+          detailsEl.innerText = "No active meetup.";
+          updatesEl.innerHTML = "";
+          return;
+        }
+        const d = currentActive.details;
+        detailsEl.innerHTML = `
+          <p><span class="font-black text-blue-900">Name:</span> ${d.fullName || '-'}</p>
+          <p><span class="font-black text-blue-900">Phones:</span> ${Array.isArray(d.phones) ? (d.phones.join(', ') || '-') : '-'}</p>
+          <p><span class="font-black text-blue-900">Place:</span> ${d.placeType || '-'}</p>
+          <p><span class="font-black text-blue-900">Location:</span> ${d.address || '-'}</p>
+          <p><span class="font-black text-blue-900">State/LGA:</span> ${d.state || '-'} / ${d.lga || '-'}</p>
+        `;
+        const images = [...(d.strangerImageUrls || []), ...(d.supportImageUrls || [])];
+        if (images.length) {
+          detailsEl.innerHTML += `
+            <div class="pt-2">
+              <p><span class="font-black text-blue-900">Images:</span></p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                ${images.map((src) => `<img src="${src}" class="w-14 h-14 rounded-lg object-cover border border-blue-100">`).join('')}
+              </div>
+            </div>`;
+        }
+        if (Array.isArray(currentActive.gpsLogs) && currentActive.gpsLogs.length) {
+          const lastGPS = [...currentActive.gpsLogs].reverse().find((g) => g.latitude && g.longitude);
+          detailsEl.innerHTML += `
+            <div class="pt-2 space-y-1">
+              <p><span class="font-black text-blue-900">Latest GPS:</span> ${lastGPS ? `${lastGPS.latitude.toFixed(5)}, ${lastGPS.longitude.toFixed(5)}` : 'Unavailable'}</p>
+              <p><span class="font-black text-blue-900">GPS Logs:</span></p>
+              <div class="max-h-28 overflow-y-auto bg-blue-50 border border-blue-100 rounded-lg p-2 text-[10px]">
+                ${currentActive.gpsLogs.slice().reverse().map((g) => `<p>${new Date(g.timestamp).toLocaleTimeString()} • ${g.latitude ? `${g.latitude.toFixed(5)}, ${g.longitude.toFixed(5)}` : g.error}</p>`).join('')}
+              </div>
+            </div>`;
+        }
+        updatesEl.innerHTML = (currentActive.updates || []).slice().reverse().map((u) => {
+          return `<div class="bg-blue-50 border border-blue-100 rounded-xl p-2"><p>${u.note}</p><p class="text-[10px] text-blue-500 mt-1">${u.time}</p></div>`;
+        }).join('');
+      }
+
+      function updateProfileUserDetails() {
+        document.getElementById('profile-user-name').innerText = `Name: ${signedInUser.name || "-"}`;
+        document.getElementById('profile-user-phone').innerText = `Phone: ${signedInUser.phone || "-"}`;
+      }
+
+      function distance(a, b) {
+        return Math.hypot((a.x || 0) - (b.x || 0), (a.y || 0) - (b.y || 0));
+      }
+
+      function averagePoint(points) {
+        const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+        return { x: sum.x / points.length, y: sum.y / points.length };
+      }
+
+      async function ensureFaceModelsLoaded(statusEl) {
+        if (faceModelsLoaded) return;
+        if (!window.faceapi) throw new Error("Face API not available");
+        const modelSources = [
+          "https://justadudewhohacks.github.io/face-api.js/models"
+        ];
+        let loaded = false;
+        for (const modelUri of modelSources) {
+          try {
+            statusEl.innerText = "Loading liveness models...";
+            await faceapi.nets.tinyFaceDetector.loadFromUri(modelUri);
+            await faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUri);
+            await faceapi.nets.faceExpressionNet.loadFromUri(modelUri);
+            loaded = true;
+            break;
+          } catch (_) {
+            // try next source
+          }
+        }
+        if (!loaded) throw new Error("ModelLoadError");
+        faceModelsLoaded = true;
+      }
+
+      function getCurrentLivenessStepText() {
+        if (!livenessSession) return "Expression step pending";
+        if (!livenessSession.smileDone) return `Step 1/3: ${LIVENESS_STEPS[0]}`;
+        if (!livenessSession.leftDone) return `Step 2/3: ${LIVENESS_STEPS[1]}`;
+        if (!livenessSession.rightDone) return `Step 3/3: ${LIVENESS_STEPS[2]}`;
+        return "All expression checks detected";
+      }
+
+      function allLivenessChecksPassed() {
+        return !!(livenessSession?.smileDone && livenessSession?.leftDone && livenessSession?.rightDone);
+      }
+
+      async function processLivenessFrame() {
+        if (!livenessSession || livenessSession.processing) return;
+        const video = document.getElementById('webcam');
+        const status = document.getElementById('verify-status');
+        const stepEl = document.getElementById('verify-step');
+        if (!video.srcObject) return;
+        livenessSession.processing = true;
+        try {
+          const detection = await faceapi
+            .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+            .withFaceLandmarks(true)
+            .withFaceExpressions();
+
+          if (!detection) {
+            status.innerText = "No face detected. Center your face.";
+            status.style.color = "#ef4444";
+            stepEl.innerText = getCurrentLivenessStepText();
+            return;
+          }
+
+          status.innerText = "Face detected. Keep steady.";
+          status.style.color = "";
+          const landmarks = detection.landmarks;
+          const expressions = detection.expressions || {};
+
+          if (!livenessSession.smileDone && (expressions.happy || 0) >= 0.65) {
+            livenessSession.smileDone = true;
+          }
+
+          const nosePoints = landmarks.getNose();
+          const noseTip = nosePoints[3] || nosePoints[Math.floor(nosePoints.length / 2)];
+          const leftEye = landmarks.getLeftEye();
+          const rightEye = landmarks.getRightEye();
+          const leftEyeMid = averagePoint(leftEye);
+          const rightEyeMid = averagePoint(rightEye);
+          const eyeMid = { x: (leftEyeMid.x + rightEyeMid.x) / 2, y: (leftEyeMid.y + rightEyeMid.y) / 2 };
+          const eyeDistance = distance(leftEyeMid, rightEyeMid) || 1;
+          const yaw = (noseTip.x - eyeMid.x) / eyeDistance;
+          if (yaw < -0.09) livenessSession.leftDone = true;
+          if (yaw > 0.09) livenessSession.rightDone = true;
+
+          livenessStepIndex =
+            (livenessSession.smileDone ? 1 : 0) +
+            (livenessSession.leftDone ? 1 : 0) +
+            (livenessSession.rightDone ? 1 : 0);
+
+          stepEl.innerText = getCurrentLivenessStepText();
+          if (allLivenessChecksPassed()) {
+            stepEl.style.color = "#10b981";
+            status.innerText = "Liveness checks passed. Capture now.";
+            document.getElementById('btn-verify-capture').classList.remove('hidden');
+            if (livenessAutoTimer) {
+              clearInterval(livenessAutoTimer);
+              livenessAutoTimer = null;
+            }
+          } else {
+            document.getElementById('btn-verify-capture').classList.add('hidden');
+          }
+        } catch (_) {
+          status.innerText = "Liveness detection failed. Hold still and retry.";
+          status.style.color = "#ef4444";
+        } finally {
+          if (livenessSession) livenessSession.processing = false;
+        }
+      }
+
+      // Images (Confidence Plus feature)
+      function gateFilePick(requiredPkg, inputEl, labelEl, filenameEl, isMulti) {
+        if (needsUpgrade(requiredPkg)) {
+          triggerUpgrade(requiredPkg, "Pictures / Visual Evidence");
+          return;
+        }
+        inputEl.click();
+      }
+
+      async function getCameraPermission() {
+        if (!navigator.permissions?.query) return cameraPermissionState;
+        try {
+          const result = await navigator.permissions.query({ name: 'camera' });
+          cameraPermissionState = result.state;
+          result.onchange = () => { cameraPermissionState = result.state; };
+          return cameraPermissionState;
+        } catch (_) {
+          return cameraPermissionState;
+        }
+      }
+
+      function describeCameraError(err) {
+        if (!err) return "Camera access failed.";
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") return "Camera permission denied. Please allow camera access in browser settings.";
+        if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") return "No camera device found on this device.";
+        if (err.name === "NotReadableError" || err.name === "TrackStartError") return "Camera is busy in another app/tab. Close other camera apps and try again.";
+        if (err.name === "SecurityError") return "Camera requires HTTPS or localhost.";
+        if (err.name === "AbortError") return "Camera request was interrupted. Please retry.";
+        return "Unable to access camera right now. Please retry.";
+      }
+
+      async function openCamera(videoEl) {
+        closeCamera(videoEl);
+        if (!window.isSecureContext) throw new Error("SecurityError");
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("NotSupportedError");
+
+        const permission = await getCameraPermission();
+        if (permission === "denied") throw new Error("NotAllowedError");
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (!devices.some((d) => d.kind === "videoinput")) throw new Error("NotFoundError");
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+        videoEl.srcObject = stream;
+        await videoEl.play().catch(() => {});
+      }
+
+      function closeCamera(videoEl) {
+        if (videoEl.srcObject) videoEl.srcObject.getTracks().forEach((t) => t.stop());
+        videoEl.srcObject = null;
+      }
+
+      function captureFrame(videoEl, canvasEl) {
+        const ctx = canvasEl.getContext('2d');
+        canvasEl.width = videoEl.videoWidth || 320;
+        canvasEl.height = videoEl.videoHeight || 240;
+        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        return canvasEl.toDataURL('image/jpeg', 0.8);
+      }
+
+      function closePreLogModal() {
+        document.getElementById('modal-prelog-photo').classList.add('hidden');
+        closeCamera(document.getElementById('prelog-webcam'));
+      }
+
+      async function openPreLogModal() {
+        const modal = document.getElementById('modal-prelog-photo');
+        const status = document.getElementById('prelog-status');
+        const video = document.getElementById('prelog-webcam');
+        modal.classList.remove('hidden');
+        status.style.color = "";
+        status.innerText = "Opening camera...";
+        try {
+          await openCamera(video);
+          status.innerText = "Camera ready";
+        } catch (err) {
+          status.innerText = describeCameraError(err);
+          status.style.color = "#ef4444";
+        }
+      }
+
+      async function scoreImageSimilarity(imgA, imgB) {
+        const load = (src) => new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+        const [a, b] = await Promise.all([load(imgA), load(imgB)]);
+        const size = 48;
+        const c1 = document.createElement('canvas');
+        const c2 = document.createElement('canvas');
+        c1.width = c1.height = c2.width = c2.height = size;
+        const x1 = c1.getContext('2d');
+        const x2 = c2.getContext('2d');
+        x1.drawImage(a, 0, 0, size, size);
+        x2.drawImage(b, 0, 0, size, size);
+        const d1 = x1.getImageData(0, 0, size, size).data;
+        const d2 = x2.getImageData(0, 0, size, size).data;
+        let diff = 0;
+        for (let i = 0; i < d1.length; i += 4) {
+          const g1 = (d1[i] + d1[i + 1] + d1[i + 2]) / 3;
+          const g2 = (d2[i] + d2[i + 1] + d2[i + 2]) / 3;
+          diff += Math.abs(g1 - g2);
+        }
+        const max = (d1.length / 4) * 255;
+        return 1 - (diff / max);
+      }
+
+      async function beginMeetupAfterCapture() {
+        let meetupId = "";
+        try {
+          const createResp = await sendToBackend({
+            action: "create",
+            sheet: "Meetups",
+            data: {
+              user_phone: signedInUser.phone || "",
+              user_name: signedInUser.name || "",
+              status: "ACTIVE_WATCH",
+              started_at: new Date().toISOString(),
+              ...(pendingMeetupData?.dynamicFields || {})
+            }
+          });
+          meetupId = safeGetCreatedId(createResp);
+        } catch (err) {
+          console.error("Meetup create failed:", err);
+        }
+
+        currentActive = {
+          start: Date.now(),
+          pkg: unlockedPackage,
+          meetupId: meetupId || `local_${Date.now()}`,
+          preLogPhoto: preLogImageDataUrl,
+          gpsLogs: [],
+          details: pendingMeetupData || {},
+          updates: []
+        };
+        pendingMeetupData = null;
+        document.getElementById('active-meetup-card-home').classList.remove('hidden');
+        document.getElementById('no-active-meetup').classList.add('hidden');
+        document.getElementById('protection-text').innerText =
+          `The "SafeMeet ${unlockedPackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+        renderActiveMeetupHomeCard();
+        renderMeetupDetails();
+        startTimer();
+        startGPSLogging();
+        showScreen('screen-home');
+      }
+
+      // Liveness
+      async function startLivenessCheck() {
+        const modal = document.getElementById('modal-verify');
+        const status = document.getElementById('verify-status');
+        const stepEl = document.getElementById('verify-step');
+        const video = document.getElementById('webcam');
+        if (!currentActive?.preLogPhoto) {
+          alert("Missing pre-log photo. Start a new meetup log.");
+          return;
+        }
+        modal.classList.remove('hidden');
+        status.style.color = "";
+        stepEl.style.color = "";
+        livenessStepIndex = 0;
+        stepEl.innerText = `Step 1/${LIVENESS_STEPS.length}: ${LIVENESS_STEPS[0]}`;
+        status.innerText = "Opening camera...";
+        document.getElementById('btn-verify-capture').classList.add('hidden');
+        if (livenessAutoTimer) clearInterval(livenessAutoTimer);
+        livenessAutoTimer = null;
+        livenessSession = {
+          smileDone: false,
+          leftDone: false,
+          rightDone: false,
+          processing: false
+        };
+
+        try {
+          await openCamera(video);
+          await ensureFaceModelsLoaded(status);
+          status.innerText = "Run liveness steps in front of camera...";
+          livenessAutoTimer = setInterval(processLivenessFrame, 220);
+        } catch (err) {
+          const msg = err?.message === "ModelLoadError"
+            ? "Liveness models could not load. Check internet and retry."
+            : describeCameraError(err);
+          alert(msg);
+          closeVerifyModal();
+        }
+      }
+
+      async function captureAndVerifyLiveness() {
+        const status = document.getElementById('verify-status');
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('verify-canvas');
+        if (!allLivenessChecksPassed()) {
+          status.innerText = "Complete all expression steps first";
+          status.style.color = "#ef4444";
+          return;
+        }
+        if (!video.srcObject) {
+          status.innerText = "Camera is not active";
+          status.style.color = "#ef4444";
+          return;
+        }
+        status.style.color = "";
+        status.innerText = "Comparing images...";
+        try {
+          const liveImage = captureFrame(video, canvas);
+          const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
+          if (score >= 0.60) {
+            status.innerText = "Liveness confirmed";
+            status.style.color = "#10b981";
+            setTimeout(() => endMeetup(), 700);
+          } else {
+            status.innerText = "Face mismatch. Try again.";
+            status.style.color = "#ef4444";
+          }
+        } catch (_) {
+          status.innerText = "Verification failed. Try again.";
+          status.style.color = "#ef4444";
+        }
+      }
+
+      function closeVerifyModal() {
+        document.getElementById('modal-verify').classList.add('hidden');
+        if (livenessAutoTimer) {
+          clearInterval(livenessAutoTimer);
+          livenessAutoTimer = null;
+        }
+        livenessSession = null;
+        closeCamera(document.getElementById('webcam'));
+      }
+
+      async function endMeetup() {
+        if (currentActive?.meetupId) {
+          try {
+            await sendToBackend({
+              action: "update",
+              sheet: "Meetups",
+              filters: { id: currentActive.meetupId },
+              data: {
+                status: "ENDED",
+                ended_at: new Date().toISOString()
+              }
+            });
+          } catch (err) {
+            console.error("Meetup end update failed:", err);
+          }
+        }
+        clearInterval(timerInt);
+        timerInt = null;
+        stopGPSLogging();
+        if (currentActive?.details) {
+          [...(currentActive.details.strangerImageUrls || []), ...(currentActive.details.supportImageUrls || [])]
+            .forEach((url) => URL.revokeObjectURL(url));
+        }
+        currentActive = null;
+        preLogImageDataUrl = "";
+        closeVerifyModal();
+        renderMeetupDetails();
+
+        // UI reset
+        document.getElementById('active-meetup-card-home').classList.add('hidden');
+        document.getElementById('no-active-meetup').classList.remove('hidden');
+        document.getElementById('active-meetup-name-display').innerText = "Logging Active";
+        document.getElementById('meetup-update-input').value = "";
+
+        showScreen('screen-home');
+        alert("SafeMeet: Data permanently deleted. Meetup secured.");
+      }
+
+      function startTimer() {
+        const end = Date.now() + SCREEN_DURATION;
+        clearInterval(timerInt);
+        timerInt = setInterval(() => {
+          const diff = end - Date.now();
+          if (diff <= 0) { clearInterval(timerInt); timerInt = null; return; }
+          const h = Math.floor(diff / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          document.getElementById('timer').innerText =
+            `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+          if (currentActive) currentActive.remainingMs = diff;
+          const almostDone = diff <= (2 * 60 * 60 * 1000);
+          const timerEl = document.getElementById('timer');
+          timerEl.classList.toggle('text-amber-500', almostDone);
+          timerEl.classList.toggle('text-blue-900', !almostDone);
+        }, 1000);
+      }
+
+      // ======= Wire up events (this is where your “Log button not working” was) =======
+      document.getElementById('btn-landing-signup').onclick = () => openAuth('signup');
+      document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
+      document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
+
+      // Bottom nav
+      document.querySelectorAll('[data-screen]').forEach(btn => {
+        btn.onclick = () => showScreen(btn.dataset.screen);
+      });
+      document.getElementById('nav-log').onclick = handleLogNav;
+
+      // Home card button
+      document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
+
+      // Active card click
+      document.getElementById('active-meetup-card-home').onclick = () => {
+        renderMeetupDetails();
+        showScreen('screen-active');
+      };
+
+      // Add phone
+      document.getElementById('btn-add-phone').onclick = addPhoneField;
+
+      // GPS
+      document.getElementById('btn-gps').onclick = activateGPS;
+
+      // Images gating + filenames
+      const inStranger = document.getElementById('img-stranger');
+      const inSupport  = document.getElementById('img-support');
+      document.getElementById('btn-img-stranger').onclick = () =>
+        gateFilePick("Confidence Plus", inStranger, null, null, false);
+      document.getElementById('btn-img-support').onclick = () =>
+        gateFilePick("Confidence Plus", inSupport, null, null, true);
+
+      inStranger.onchange = () => {
+        document.getElementById('fn-img-stranger').innerText = inStranger.files?.[0]?.name ? `(${inStranger.files[0].name})` : "";
+      };
+      inSupport.onchange = () => {
+        const count = inSupport.files ? inSupport.files.length : 0;
+        document.getElementById('fn-img-support').innerText = count ? `(${count} file${count>1?'s':''} selected)` : "";
+      };
+
+      // Upgrade modal buttons
+      document.getElementById('btn-upgrade-later').onclick = closeUpgradeModal;
+      document.getElementById('btn-upgrade-paid').onclick = () => {
+        // simulate unlock to the package required by what user attempted
+        if (pendingUpgradeTarget) unlockedPackage = pendingUpgradeTarget;
+        closeUpgradeModal();
+
+        // reflect package in active screen text (optional but useful)
+        const protectionText = document.getElementById('protection-text');
+        protectionText.innerText =
+          `The "SafeMeet ${unlockedPackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+        alert(`Unlocked: ${unlockedPackage}`);
+      };
+
+      // Auth submit
+      document.getElementById('auth-form').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!validateAuthForm()) return;
+        const nameInput = document.getElementById('auth-name').value.trim();
+        const phoneInput = document.getElementById('auth-phone').value.trim();
+        const pinInput = document.getElementById('auth-pin').value.trim();
+        const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
+        const authDynamicData = extractDynamicFormData(document.getElementById('auth-form'));
+
+        try {
+          if (isSignup) {
+            await sendToBackend({
+              action: "create",
+              sheet: "Users",
+              data: {
+                phone: phoneInput,
+                name: nameInput || "User",
+                pin: pinInput,
+                ...authDynamicData
+              }
+            });
+            signedInUser = { name: nameInput || "User", phone: phoneInput || "-" };
+          } else {
+            const readResp = await sendToBackend({
+              action: "read",
+              sheet: "Users",
+              filters: { phone: phoneInput, pin: pinInput }
+            });
+            const foundUser = Array.isArray(readResp?.data) ? readResp.data[0] : null;
+            if (!foundUser) {
+              setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
+              return;
+            }
+            signedInUser = {
+              name: foundUser.name || nameInput || "User",
+              phone: foundUser.phone || phoneInput || "-"
+            };
+          }
+        } catch (err) {
+          setFieldError(document.getElementById('auth-phone'), "Unable to reach server");
+          return;
+        }
+
+        updateProfileUserDetails();
+        document.getElementById('app-nav').classList.remove('hidden');
+        document.getElementById('user-info-reveal').classList.remove('hidden');
+        showScreen('screen-home');
+        startUsersMapPulse();
+      };
+
+      // Profile save
+      document.getElementById('profile-form').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!validateProfileForm()) return;
+        const priorityEl = document.getElementById('fpc-priority');
+        const priorityText = priorityEl.options[priorityEl.selectedIndex].text;
+        document.getElementById('fpc-summary').innerText =
+          `${document.getElementById('fpc-name').value} (${document.getElementById('fpc-relation').value}) • ${document.getElementById('fpc-phone').value} • ${priorityText}`;
+        try {
+          await sendToBackend({
+            action: "update",
+            sheet: "Users",
+            filters: { phone: signedInUser.phone },
+            data: extractDynamicFormData(document.getElementById('profile-form'))
+          });
+        } catch (err) {
+          console.error("Profile update failed:", err);
+        }
+        alert("Profile saved.");
+      };
+
+      document.getElementById('btn-add-update').onclick = async () => {
+        if (!currentActive) {
+          alert("No active meetup.");
+          return;
+        }
+        const updateInput = document.getElementById('meetup-update-input');
+        const note = updateInput.value.trim();
+        if (!note) {
+          setFieldError(updateInput, "Update note cannot be empty");
+          return;
+        }
+        currentActive.updates.push({
+          note,
+          time: new Date().toLocaleString()
+        });
+        if (currentActive.meetupId) {
+          try {
+            await sendToBackend({
+              action: "update",
+              sheet: "Meetups",
+              filters: { id: currentActive.meetupId },
+              data: {
+                last_update_note: note,
+                last_update_at: new Date().toISOString(),
+                status: "ACTIVE_WATCH"
+              }
+            });
+          } catch (err) {
+            console.error("Meetup update write failed:", err);
+          }
+        }
+        updateInput.value = "";
+        removeFieldError(updateInput);
+        renderMeetupDetails();
+      };
+
+      document.getElementById('btn-capture-prelog').onclick = async () => {
+        const video = document.getElementById('prelog-webcam');
+        const canvas = document.getElementById('prelog-canvas');
+        const status = document.getElementById('prelog-status');
+        if (!video.srcObject) {
+          status.innerText = "Camera is not active";
+          status.style.color = "#ef4444";
+          return;
+        }
+        preLogImageDataUrl = captureFrame(video, canvas);
+        closePreLogModal();
+        await beginMeetupAfterCapture();
+      };
+      document.getElementById('btn-cancel-prelog').onclick = closePreLogModal;
+
+      // Log form submit => capture photo first, then start watch
+      document.getElementById('log-form').onsubmit = (e) => {
+        e.preventDefault();
+        if (!validateLogForm()) return;
+        pendingMeetupData = collectMeetupDataFromForm();
+        openPreLogModal();
+      };
+
+      // End meetup button => MUST do liveness first
+      document.getElementById('btn-end-meetup').onclick = startLivenessCheck;
+      document.getElementById('btn-cancel-verify').onclick = closeVerifyModal;
+      document.getElementById('btn-verify-capture').onclick = captureAndVerifyLiveness;
+
+      // Keep tel fields numeric at all times
+      document.addEventListener('input', (e) => {
+        if (e.target.matches('input[type="tel"]')) sanitizeDigitsOnly(e.target);
+        if (e.target.matches('.form-input')) removeFieldError(e.target);
+      });
+      document.addEventListener('change', (e) => {
+        if (e.target.matches('.form-input')) removeFieldError(e.target);
+      });
+
+      // Startup
+      loadNigeriaData();
+      updateProfileUserDetails();
+      showScreen('screen-landing');
+      startSocialProof();
+    });
+  </script>
 </body>
-    </html>
+</html>
