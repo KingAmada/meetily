@@ -1090,6 +1090,7 @@
 
       function validateLogForm() {
         let valid = true;
+        valid = validateRequired(document.getElementById('log-package'), "Package is required") && valid;
         valid = validateRequired(document.getElementById('place-type'), "Place type is required") && valid;
         valid = validateRequired(document.getElementById('address'), "Address/Location/Landmark is required") && valid;
         valid = validateRequired(document.getElementById('state-select'), "State is required") && valid;
@@ -1460,7 +1461,17 @@
       }
 
       function needsUpgrade(requiredPkg) {
-        return PACKAGE_RANK[unlockedPackage] < PACKAGE_RANK[requiredPkg];
+        return !packageCovers(signedInUser.package || unlockedPackage || "Basic", requiredPkg);
+      }
+
+      function ensureSelectedPackageAtLeast(requiredPkg) {
+        const pkgEl = document.getElementById('log-package');
+        if (!pkgEl) return;
+        const current = pkgEl.value || "Basic";
+        if (!packageCovers(current, requiredPkg)) {
+          pkgEl.value = requiredPkg;
+          removeFieldError(pkgEl);
+        }
       }
 
       function triggerUpgrade(requiredPkg, feature) {
@@ -1520,6 +1531,11 @@
       }
 
       async function activateGPS() {
+        ensureSelectedPackageAtLeast("Standard");
+        if (needsUpgrade("Standard")) {
+          triggerUpgrade("Standard", "Live GPS Tracking");
+          return;
+        }
         const status = document.getElementById('gps-status');
         status.classList.remove('hidden');
         status.innerText = "Fetching GPS...";
@@ -1616,6 +1632,7 @@
         const strangerImageDataUrls = await filesToDataUrls(strangerFiles.slice(0, 1));
         const supportImageDataUrls = await filesToDataUrls(supportFiles);
         return {
+          selectedPackage: document.getElementById('log-package').value || "Basic",
           fullName: `${document.getElementById('fname').value} ${document.getElementById('lname').value}`.trim(),
           phones: [...document.querySelectorAll('.phone-entry')].map((el) => el.value).filter(Boolean),
           nickname: document.getElementById('nickname').value.trim(),
@@ -1795,11 +1812,21 @@
 
       // Images (Confidence Plus feature)
       function gateFilePick(requiredPkg, inputEl, labelEl, filenameEl, isMulti) {
+        ensureSelectedPackageAtLeast(requiredPkg);
         if (needsUpgrade(requiredPkg)) {
           triggerUpgrade(requiredPkg, "Pictures / Visual Evidence");
           return;
         }
         inputEl.click();
+      }
+
+      function requiredPackageFromFeatures() {
+        const gpsStatus = document.getElementById('gps-status');
+        const hasGps = !!(gpsStatus?.dataset?.lat && gpsStatus?.dataset?.lng);
+        const hasImages = (inStranger?.files?.length || 0) > 0 || (inSupport?.files?.length || 0) > 0;
+        if (hasImages) return "Confidence Plus";
+        if (hasGps) return "Standard";
+        return "Basic";
       }
 
       async function getCameraPermission() {
@@ -1906,6 +1933,7 @@
       }
 
       async function beginMeetupAfterCapture() {
+        const activePackage = pendingMeetupData?.selectedPackage || unlockedPackage || "Basic";
         let meetupId = "";
         try {
           const createResp = await sendToBackend({
@@ -1926,7 +1954,7 @@
 
         currentActive = {
           start: Date.now(),
-          pkg: unlockedPackage,
+          pkg: activePackage,
           meetupId: meetupId || `local_${Date.now()}`,
           preLogPhoto: preLogImageDataUrl,
           gpsLogs: [],
@@ -1937,7 +1965,7 @@
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
         document.getElementById('no-active-meetup').classList.add('hidden');
         document.getElementById('protection-text').innerText =
-          `The "SafeMeet ${unlockedPackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+          `The "SafeMeet ${activePackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
         renderActiveMeetupHomeCard();
         renderMeetupDetails();
         startTimer();
@@ -2288,6 +2316,11 @@
           setFieldError(packageSelect, "Please select a package");
           return;
         }
+        const featureRequiredPackage = requiredPackageFromFeatures();
+        if (!packageCovers(selectedPackage, featureRequiredPackage)) {
+          setFieldError(packageSelect, `Selected package must be ${featureRequiredPackage} or higher for chosen features`);
+          return;
+        }
         try {
           const statusResp = await checkPaymentStatus(signedInUser.phone || "", "");
           signedInUser.isPaid = !!(statusResp?.isPaid || statusResp?.user?.isPaid);
@@ -2300,6 +2333,7 @@
             startPaymentPolling();
             return;
           }
+          unlockedPackage = selectedPackage;
         } catch (err) {
           setFieldError(packageSelect, "Could not verify payment. Please try again.");
           return;
