@@ -104,6 +104,18 @@
       box-shadow:0 10px 20px -5px rgba(14,165,233,0.4);
     }
     .btn-primary:active{transform:scale(0.96);}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .btn-spinner{
+      display:inline-block;
+      width:14px;
+      height:14px;
+      border:2px solid rgba(255,255,255,0.45);
+      border-top-color:#ffffff;
+      border-radius:9999px;
+      animation:spin .75s linear infinite;
+      vertical-align:-2px;
+      margin-right:8px;
+    }
 
     .stat-card{
       background:white;border:1px solid #e2e8f0;border-radius:1.5rem;
@@ -339,7 +351,7 @@
                  oninput="this.value=this.value.replace(/\\D/g,'')"
                  required class="form-input text-center text-2xl tracking-[0.5em]">
 
-          <button type="submit" class="w-full btn-primary font-bold py-4 rounded-2xl shadow-lg mt-4">Continue</button>
+          <button id="auth-submit-btn" type="submit" class="w-full btn-primary font-bold py-4 rounded-2xl shadow-lg mt-4">Create Account</button>
         </form>
         <button type="button" id="btn-toggle-auth" class="w-full text-center text-sm font-semibold text-blue-600">Already have an account? Sign In</button>
       </div>
@@ -488,7 +500,7 @@
             <textarea id="info-extra" placeholder="Additional Details (Optional)" rows="2" class="form-input"></textarea>
           </div>
 
-          <button type="submit" class="w-full btn-primary font-black py-5 rounded-2xl shadow-2xl uppercase tracking-widest">
+          <button id="btn-log-submit" type="submit" class="w-full btn-primary font-black py-5 rounded-2xl shadow-2xl uppercase tracking-widest">
             Start 48h Safety Watch
           </button>
         </form>
@@ -730,6 +742,9 @@
       let faceModelsLoaded = false;
       let livenessSession = null;
       let cameraPermissionState = "prompt";
+      let isAuthSubmitting = false;
+      let isLogSubmitting = false;
+      let isPrelogCaptureBusy = false;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -746,6 +761,39 @@
 
       function sanitizeDigitsOnly(input) {
         input.value = input.value.replace(/\D/g, '');
+      }
+
+      function normalizePhone(value) {
+        return String(value || "").replace(/\D/g, "").trim();
+      }
+
+      function normalizePin(value) {
+        return String(value || "").replace(/\D/g, "").trim();
+      }
+
+      function setButtonLoading(button, isLoading, loadingLabel) {
+        if (!button) return;
+        if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.innerText;
+        button.disabled = !!isLoading;
+        if (isLoading) {
+          button.innerHTML = `<span class="btn-spinner"></span>${loadingLabel || "Processing..."}`;
+          return;
+        }
+        button.innerText = button.dataset.defaultLabel;
+      }
+
+      function setAuthModeUi(isSignup) {
+        const title = document.getElementById('auth-title');
+        const subtitle = document.getElementById('auth-subtitle');
+        const signup = document.getElementById('signup-fields');
+        const toggle = document.getElementById('btn-toggle-auth');
+        const submitBtn = document.getElementById('auth-submit-btn');
+        title.innerText = isSignup ? 'Sign Up' : 'Welcome Back';
+        subtitle.innerText = isSignup ? 'Enter your details to proceed.' : 'Sign in with your phone and PIN.';
+        signup.style.display = isSignup ? 'block' : 'none';
+        toggle.innerText = isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
+        submitBtn.dataset.defaultLabel = isSignup ? 'Create Account' : 'Sign In';
+        submitBtn.innerText = submitBtn.dataset.defaultLabel;
       }
 
       function normalizeKey(key) {
@@ -797,6 +845,47 @@
 
       function safeGetCreatedId(resp) {
         return resp?.id || resp?.data?.id || resp?.data?.[0]?.id || "";
+      }
+
+      function extractRows(resp) {
+        if (Array.isArray(resp?.data)) return resp.data;
+        if (Array.isArray(resp?.rows)) return resp.rows;
+        if (Array.isArray(resp?.result)) return resp.result;
+        if (Array.isArray(resp?.data?.rows)) return resp.data.rows;
+        return [];
+      }
+
+      function findUserByPhone(rows, phone) {
+        const targetPhone = normalizePhone(phone);
+        return rows.find((u) => normalizePhone(u?.phone) === targetPhone) || null;
+      }
+
+      async function readUsersByPhone(phone) {
+        try {
+          return await sendToBackend({
+            action: "read",
+            sheet: "Users",
+            filters: { phone }
+          });
+        } catch (_) {
+          return await sendToBackend({
+            action: "read",
+            sheet: "Users"
+          });
+        }
+      }
+
+      async function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function filesToDataUrls(files) {
+        return Promise.all(files.map((f) => fileToDataUrl(f)));
       }
 
       function removeFieldError(input) {
@@ -1226,23 +1315,13 @@
       }
 
       function toggleAuthMode() {
-        const title = document.getElementById('auth-title');
-        const subtitle = document.getElementById('auth-subtitle');
-        const signup = document.getElementById('signup-fields');
-        const isSignup = title.innerText === 'Sign Up';
-        title.innerText = isSignup ? 'Welcome Back' : 'Sign Up';
-        subtitle.innerText = isSignup ? 'Sign in with your phone and PIN.' : 'Enter your details to proceed.';
-        signup.style.display = isSignup ? 'none' : 'block';
+        const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
+        setAuthModeUi(!isSignup);
       }
 
       function openAuth(mode) {
-        const title = document.getElementById('auth-title');
-        const subtitle = document.getElementById('auth-subtitle');
-        const signup = document.getElementById('signup-fields');
         const goSignup = mode === 'signup';
-        title.innerText = goSignup ? 'Sign Up' : 'Welcome Back';
-        subtitle.innerText = goSignup ? 'Enter your details to proceed.' : 'Sign in with your phone and PIN.';
-        signup.style.display = goSignup ? 'block' : 'none';
+        setAuthModeUi(goSignup);
         showScreen('screen-auth');
       }
 
@@ -1396,10 +1475,12 @@
         gpsLogInterval = null;
       }
 
-      function collectMeetupDataFromForm() {
+      async function collectMeetupDataFromForm() {
         const dynamicFields = extractDynamicFormData(document.getElementById('log-form'));
         const strangerFiles = inStranger.files ? Array.from(inStranger.files) : [];
         const supportFiles = inSupport.files ? Array.from(inSupport.files) : [];
+        const strangerImageDataUrls = await filesToDataUrls(strangerFiles.slice(0, 1));
+        const supportImageDataUrls = await filesToDataUrls(supportFiles);
         return {
           fullName: `${document.getElementById('fname').value} ${document.getElementById('lname').value}`.trim(),
           phones: [...document.querySelectorAll('.phone-entry')].map((el) => el.value).filter(Boolean),
@@ -1410,8 +1491,8 @@
           state: document.getElementById('state-select').value,
           lga: document.getElementById('lga-select').value,
           extra: document.getElementById('info-extra').value.trim(),
-          strangerImageUrls: strangerFiles.map((f) => URL.createObjectURL(f)),
-          supportImageUrls: supportFiles.map((f) => URL.createObjectURL(f)),
+          strangerImageDataUrls,
+          supportImageDataUrls,
           dynamicFields
         };
       }
@@ -1437,7 +1518,7 @@
           <p><span class="font-black text-blue-900">Location:</span> ${d.address || '-'}</p>
           <p><span class="font-black text-blue-900">State/LGA:</span> ${d.state || '-'} / ${d.lga || '-'}</p>
         `;
-        const images = [...(d.strangerImageUrls || []), ...(d.supportImageUrls || [])];
+        const images = [...(d.strangerImageDataUrls || []), ...(d.supportImageDataUrls || [])];
         if (images.length) {
           detailsEl.innerHTML += `
             <div class="pt-2">
@@ -1832,10 +1913,6 @@
         clearInterval(timerInt);
         timerInt = null;
         stopGPSLogging();
-        if (currentActive?.details) {
-          [...(currentActive.details.strangerImageUrls || []), ...(currentActive.details.supportImageUrls || [])]
-            .forEach((url) => URL.revokeObjectURL(url));
-        }
         currentActive = null;
         preLogImageDataUrl = "";
         closeVerifyModal();
@@ -1929,15 +2006,28 @@
       // Auth submit
       document.getElementById('auth-form').onsubmit = async (e) => {
         e.preventDefault();
+        if (isAuthSubmitting) return;
         if (!validateAuthForm()) return;
+        isAuthSubmitting = true;
+        const submitBtn = document.getElementById('auth-submit-btn');
+        const toggleBtn = document.getElementById('btn-toggle-auth');
         const nameInput = document.getElementById('auth-name').value.trim();
-        const phoneInput = document.getElementById('auth-phone').value.trim();
-        const pinInput = document.getElementById('auth-pin').value.trim();
+        const phoneInput = normalizePhone(document.getElementById('auth-phone').value);
+        const pinInput = normalizePin(document.getElementById('auth-pin').value);
         const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
         const authDynamicData = extractDynamicFormData(document.getElementById('auth-form'));
+        setButtonLoading(submitBtn, true, isSignup ? "Creating account..." : "Signing in...");
+        toggleBtn.disabled = true;
+        toggleBtn.classList.add('opacity-60');
 
         try {
           if (isSignup) {
+            const existingResp = await readUsersByPhone(phoneInput);
+            const existingRows = extractRows(existingResp);
+            if (findUserByPhone(existingRows, phoneInput)) {
+              setFieldError(document.getElementById('auth-phone'), "Phone already exists. Sign in instead.");
+              return;
+            }
             await sendToBackend({
               action: "create",
               sheet: "Users",
@@ -1950,12 +2040,11 @@
             });
             signedInUser = { name: nameInput || "User", phone: phoneInput || "-" };
           } else {
-            const readResp = await sendToBackend({
-              action: "read",
-              sheet: "Users",
-              filters: { phone: phoneInput, pin: pinInput }
-            });
-            const foundUser = Array.isArray(readResp?.data) ? readResp.data[0] : null;
+            const readResp = await readUsersByPhone(phoneInput);
+            const rows = extractRows(readResp);
+            const foundUser = rows.find((u) => {
+              return normalizePhone(u?.phone) === phoneInput && normalizePin(u?.pin) === pinInput;
+            }) || null;
             if (!foundUser) {
               setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
               return;
@@ -1968,6 +2057,11 @@
         } catch (err) {
           setFieldError(document.getElementById('auth-phone'), "Unable to reach server");
           return;
+        } finally {
+          setButtonLoading(submitBtn, false);
+          toggleBtn.disabled = false;
+          toggleBtn.classList.remove('opacity-60');
+          isAuthSubmitting = false;
         }
 
         updateProfileUserDetails();
@@ -2035,26 +2129,44 @@
       };
 
       document.getElementById('btn-capture-prelog').onclick = async () => {
+        if (isPrelogCaptureBusy) return;
         const video = document.getElementById('prelog-webcam');
         const canvas = document.getElementById('prelog-canvas');
         const status = document.getElementById('prelog-status');
+        const captureBtn = document.getElementById('btn-capture-prelog');
         if (!video.srcObject) {
           status.innerText = "Camera is not active";
           status.style.color = "#ef4444";
           return;
         }
-        preLogImageDataUrl = captureFrame(video, canvas);
-        closePreLogModal();
-        await beginMeetupAfterCapture();
+        isPrelogCaptureBusy = true;
+        setButtonLoading(captureBtn, true, "Saving...");
+        try {
+          preLogImageDataUrl = captureFrame(video, canvas);
+          closePreLogModal();
+          await beginMeetupAfterCapture();
+        } finally {
+          isPrelogCaptureBusy = false;
+          setButtonLoading(captureBtn, false);
+        }
       };
       document.getElementById('btn-cancel-prelog').onclick = closePreLogModal;
 
       // Log form submit => capture photo first, then start watch
-      document.getElementById('log-form').onsubmit = (e) => {
+      document.getElementById('log-form').onsubmit = async (e) => {
         e.preventDefault();
+        if (isLogSubmitting) return;
         if (!validateLogForm()) return;
-        pendingMeetupData = collectMeetupDataFromForm();
-        openPreLogModal();
+        isLogSubmitting = true;
+        const logSubmitBtn = document.getElementById('btn-log-submit');
+        setButtonLoading(logSubmitBtn, true, "Saving...");
+        try {
+          pendingMeetupData = await collectMeetupDataFromForm();
+          await openPreLogModal();
+        } finally {
+          isLogSubmitting = false;
+          setButtonLoading(logSubmitBtn, false);
+        }
       };
 
       // End meetup button => MUST do liveness first
