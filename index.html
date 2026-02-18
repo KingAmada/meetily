@@ -372,6 +372,9 @@
             <button id="btn-home-log" class="btn-primary px-10 py-3 rounded-2xl font-bold text-sm">
               Log New Meetup
             </button>
+            <p id="payment-pill-home" class="hidden text-[10px] bg-amber-50 text-amber-700 px-3 py-2 rounded-full border border-amber-200 font-black uppercase tracking-widest">
+              Payment pending
+            </p>
             <p class="text-[11px] text-slate-500 font-semibold">Take control of your safety. You're in charge.</p>
         </div>
 
@@ -623,6 +626,25 @@
         </div>
       </div>
 
+      <!-- MODAL: PAYMENT WAIT -->
+      <div id="modal-payment" class="hidden fixed inset-0 bg-blue-900/50 backdrop-blur-md z-[114] flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.3rem] w-full max-w-sm p-8 space-y-6 shadow-2xl">
+          <div class="text-center space-y-2">
+            <h2 class="text-2xl font-black text-blue-900">Complete Payment</h2>
+            <p class="text-sm text-slate-500">Transfer to this virtual account. Logging unlocks automatically once paid.</p>
+          </div>
+          <div class="bg-blue-50 border border-blue-100 rounded-3xl p-5 text-center space-y-2">
+            <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest">Virtual Account Number</p>
+            <p id="payment-account-number" class="text-3xl text-blue-700 font-black tracking-wide">-</p>
+          </div>
+          <p id="payment-status-text" class="text-xs text-slate-500 text-center font-bold uppercase tracking-widest">Waiting for payment confirmation...</p>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" id="btn-payment-refresh" class="btn-primary py-3 rounded-xl font-black uppercase tracking-widest text-xs">Check Now</button>
+            <button type="button" id="btn-payment-close" class="text-slate-400 font-bold py-3 text-xs uppercase tracking-widest">Close</button>
+          </div>
+        </div>
+      </div>
+
       <!-- MODAL: LIVENESS -->
       <div id="modal-verify" class="hidden fixed inset-0 bg-white/95 backdrop-blur-2xl z-[120] flex items-center justify-center p-6">
         <div class="w-full max-w-sm text-center space-y-10">
@@ -736,7 +758,7 @@
       let polygonSeries = null;
       let dotSeries = null;
       let stateGeometryPool = [];
-      let signedInUser = { name: "", phone: "" };
+      let signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "" };
       let livenessStepIndex = 0;
       let livenessAutoTimer = null;
       let faceModelsLoaded = false;
@@ -745,6 +767,7 @@
       let isAuthSubmitting = false;
       let isLogSubmitting = false;
       let isPrelogCaptureBusy = false;
+      let paymentPollInterval = null;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -755,6 +778,7 @@
       let toastInterval = null;
       let toastVisibleTimeout = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
+      const PEYGO_API = "https://peygo.net/_functions";
 
       const stateSel = document.getElementById('state-select');
       const lgaSel = document.getElementById('lga-select');
@@ -769,6 +793,18 @@
 
       function normalizePin(value) {
         return String(value || "").replace(/\D/g, "").trim();
+      }
+
+      function userCanLog() {
+        return !!signedInUser?.isPaid;
+      }
+
+      function refreshPaymentUi() {
+        const paymentPill = document.getElementById('payment-pill-home');
+        const logBtn = document.getElementById('btn-home-log');
+        if (!paymentPill || !logBtn) return;
+        paymentPill.classList.toggle('hidden', userCanLog());
+        logBtn.classList.toggle('opacity-60', !userCanLog());
       }
 
       function setButtonLoading(button, isLoading, loadingLabel) {
@@ -794,6 +830,80 @@
         toggle.innerText = isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
         submitBtn.dataset.defaultLabel = isSignup ? 'Create Account' : 'Sign In';
         submitBtn.innerText = submitBtn.dataset.defaultLabel;
+      }
+
+      async function peygoSignup(name, phone, pin) {
+        const res = await fetch(`${PEYGO_API}/apiSafeMeetSignup`, {
+          method: "POST",
+          body: JSON.stringify({ name, phone, pin })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || String(data?.status || "").toLowerCase() !== "success") {
+          throw new Error(data?.message || "Signup failed");
+        }
+        return data;
+      }
+
+      async function checkPaymentStatus(phone, pin) {
+        const query = new URLSearchParams({ phone: normalizePhone(phone) });
+        if (pin) query.set("pin", normalizePin(pin));
+        const res = await fetch(`${PEYGO_API}/apiSafeMeetStatus?${query.toString()}`, { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.message || "Unable to verify payment");
+        return data;
+      }
+
+      function stopPaymentPolling() {
+        if (paymentPollInterval) clearInterval(paymentPollInterval);
+        paymentPollInterval = null;
+      }
+
+      function closePaymentModal() {
+        document.getElementById('modal-payment').classList.add('hidden');
+      }
+
+      function openPaymentModal(accountNumber) {
+        document.getElementById('payment-account-number').innerText = accountNumber || "-";
+        document.getElementById('payment-status-text').innerText = "Waiting for payment confirmation...";
+        document.getElementById('modal-payment').classList.remove('hidden');
+      }
+
+      async function verifyPaymentNow() {
+        const statusEl = document.getElementById('payment-status-text');
+        try {
+          statusEl.innerText = "Checking payment status...";
+          const resp = await checkPaymentStatus(signedInUser.phone || "", "");
+          const paid = !!(resp?.isPaid || resp?.user?.isPaid);
+          if (paid) {
+            stopPaymentPolling();
+            signedInUser.isPaid = true;
+            signedInUser.package = resp?.package || resp?.user?.package || signedInUser.package || "Basic";
+            unlockedPackage = signedInUser.package;
+            statusEl.innerText = "Payment confirmed. Logging unlocked.";
+            closePaymentModal();
+            refreshPaymentUi();
+            return true;
+          }
+          statusEl.innerText = "Not paid yet. We will keep checking every 5 seconds.";
+          return false;
+        } catch (_) {
+          statusEl.innerText = "Could not verify right now. Tap Check Now again.";
+          return false;
+        }
+      }
+
+      function startPaymentPolling() {
+        stopPaymentPolling();
+        paymentPollInterval = setInterval(verifyPaymentNow, 5000);
+      }
+
+      function finalizeSigninUi() {
+        updateProfileUserDetails();
+        refreshPaymentUi();
+        document.getElementById('app-nav').classList.remove('hidden');
+        document.getElementById('user-info-reveal').classList.remove('hidden');
+        showScreen('screen-home');
+        startUsersMapPulse();
       }
 
       function normalizeKey(key) {
@@ -1321,6 +1431,8 @@
 
       function openAuth(mode) {
         const goSignup = mode === 'signup';
+        stopPaymentPolling();
+        closePaymentModal();
         setAuthModeUi(goSignup);
         showScreen('screen-auth');
       }
@@ -1341,6 +1453,11 @@
       }
 
       function handleLogNav() {
+        if (!userCanLog()) {
+          openPaymentModal(signedInUser.virtualAccountNumber || "");
+          startPaymentPolling();
+          return;
+        }
         if (currentActive) showScreen('screen-active');
         else showScreen('screen-log-form');
       }
@@ -1959,7 +2076,14 @@
       document.getElementById('nav-log').onclick = handleLogNav;
 
       // Home card button
-      document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
+      document.getElementById('btn-home-log').onclick = () => {
+        if (!userCanLog()) {
+          openPaymentModal(signedInUser.virtualAccountNumber || "");
+          startPaymentPolling();
+          return;
+        }
+        showScreen('screen-log-form');
+      };
 
       // Active card click
       document.getElementById('active-meetup-card-home').onclick = () => {
@@ -2002,6 +2126,8 @@
           `The "SafeMeet ${unlockedPackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
         alert(`Unlocked: ${unlockedPackage}`);
       };
+      document.getElementById('btn-payment-close').onclick = closePaymentModal;
+      document.getElementById('btn-payment-refresh').onclick = verifyPaymentNow;
 
       // Auth submit
       document.getElementById('auth-form').onsubmit = async (e) => {
@@ -2015,47 +2141,40 @@
         const phoneInput = normalizePhone(document.getElementById('auth-phone').value);
         const pinInput = normalizePin(document.getElementById('auth-pin').value);
         const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
-        const authDynamicData = extractDynamicFormData(document.getElementById('auth-form'));
         setButtonLoading(submitBtn, true, isSignup ? "Creating account..." : "Signing in...");
         toggleBtn.disabled = true;
         toggleBtn.classList.add('opacity-60');
 
         try {
           if (isSignup) {
-            const existingResp = await readUsersByPhone(phoneInput);
-            const existingRows = extractRows(existingResp);
-            if (findUserByPhone(existingRows, phoneInput)) {
-              setFieldError(document.getElementById('auth-phone'), "Phone already exists. Sign in instead.");
-              return;
-            }
-            await sendToBackend({
-              action: "create",
-              sheet: "Users",
-              data: {
-                phone: phoneInput,
-                name: nameInput || "User",
-                pin: pinInput,
-                ...authDynamicData
-              }
-            });
-            signedInUser = { name: nameInput || "User", phone: phoneInput || "-" };
+            const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
+            const signupUser = signupResp?.user || {};
+            signedInUser = {
+              name: signupUser?.name || nameInput || "User",
+              phone: normalizePhone(signupUser?.phone || phoneInput || ""),
+              isPaid: !!signupUser?.isPaid,
+              package: signupUser?.package || "Basic",
+              virtualAccountNumber: signupUser?.virtualAccountNumber || ""
+            };
+            unlockedPackage = signedInUser.package || "Basic";
           } else {
-            const readResp = await readUsersByPhone(phoneInput);
-            const rows = extractRows(readResp);
-            const foundUser = rows.find((u) => {
-              return normalizePhone(u?.phone) === phoneInput && normalizePin(u?.pin) === pinInput;
-            }) || null;
-            if (!foundUser) {
+            const statusResp = await checkPaymentStatus(phoneInput, pinInput);
+            if (String(statusResp?.status || "").toLowerCase() === "error") {
               setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
               return;
             }
+            const statusUser = statusResp?.user || {};
             signedInUser = {
-              name: foundUser.name || nameInput || "User",
-              phone: foundUser.phone || phoneInput || "-"
+              name: statusUser?.name || nameInput || "User",
+              phone: normalizePhone(statusUser?.phone || phoneInput || ""),
+              isPaid: !!(statusResp?.isPaid || statusUser?.isPaid),
+              package: statusResp?.package || statusUser?.package || "Basic",
+              virtualAccountNumber: statusUser?.virtualAccountNumber || statusResp?.virtualAccountNumber || ""
             };
+            unlockedPackage = signedInUser.package || "Basic";
           }
         } catch (err) {
-          setFieldError(document.getElementById('auth-phone'), "Unable to reach server");
+          setFieldError(document.getElementById('auth-phone'), err?.message || "Unable to reach server");
           return;
         } finally {
           setButtonLoading(submitBtn, false);
@@ -2064,11 +2183,14 @@
           isAuthSubmitting = false;
         }
 
-        updateProfileUserDetails();
-        document.getElementById('app-nav').classList.remove('hidden');
-        document.getElementById('user-info-reveal').classList.remove('hidden');
-        showScreen('screen-home');
-        startUsersMapPulse();
+        finalizeSigninUi();
+        if (!userCanLog()) {
+          openPaymentModal(signedInUser.virtualAccountNumber || "");
+          startPaymentPolling();
+        } else {
+          stopPaymentPolling();
+          closePaymentModal();
+        }
       };
 
       // Profile save
@@ -2155,6 +2277,11 @@
       // Log form submit => capture photo first, then start watch
       document.getElementById('log-form').onsubmit = async (e) => {
         e.preventDefault();
+        if (!userCanLog()) {
+          openPaymentModal(signedInUser.virtualAccountNumber || "");
+          startPaymentPolling();
+          return;
+        }
         if (isLogSubmitting) return;
         if (!validateLogForm()) return;
         isLogSubmitting = true;
@@ -2186,8 +2313,10 @@
       // Startup
       loadNigeriaData();
       updateProfileUserDetails();
+      refreshPaymentUi();
       showScreen('screen-landing');
       startSocialProof();
+      window.addEventListener('beforeunload', stopPaymentPolling);
     });
   </script>
 </body>
