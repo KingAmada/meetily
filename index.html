@@ -12,6 +12,8 @@
   <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
   <script src="https://cdn.amcharts.com/lib/5/geodata/nigeriaLow.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="icon" type="image/png" href="./favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="./favicon.png" />
 
   <style>
     :root{
@@ -782,7 +784,6 @@
       async function sendToBackend(payload) {
         const res = await fetch(BACKEND_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
         const text = await res.text();
