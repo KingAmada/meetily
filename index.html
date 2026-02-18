@@ -433,6 +433,17 @@
         </div>
 
         <form id="log-form" class="space-y-6 pb-20">
+          <div class="space-y-2">
+            <label for="log-package" class="block text-xs font-black text-blue-900 uppercase tracking-widest">Select Package *</label>
+            <select id="log-package" required class="form-input">
+              <option value="">Choose package...</option>
+              <option value="Basic">Basic</option>
+              <option value="Standard">Standard</option>
+              <option value="Confidence Plus">Confidence Plus</option>
+            </select>
+            <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Payment is verified at log submission.</p>
+          </div>
+
           <div class="space-y-4">
             <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">The Stranger</h3>
             <div class="grid grid-cols-2 gap-4">
@@ -637,7 +648,8 @@
             <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest">Virtual Account Number</p>
             <p id="payment-account-number" class="text-3xl text-blue-700 font-black tracking-wide">-</p>
           </div>
-          <p id="payment-status-text" class="text-xs text-slate-500 text-center font-bold uppercase tracking-widest">Waiting for payment confirmation...</p>
+            <p id="payment-status-text" class="text-xs text-slate-500 text-center font-bold uppercase tracking-widest">Waiting for payment confirmation...</p>
+            <p id="payment-required-package" class="text-[10px] text-blue-500 text-center font-black uppercase tracking-widest">Required plan: -</p>
           <div class="grid grid-cols-2 gap-3">
             <button type="button" id="btn-payment-refresh" class="btn-primary py-3 rounded-xl font-black uppercase tracking-widest text-xs">Check Now</button>
             <button type="button" id="btn-payment-close" class="text-slate-400 font-bold py-3 text-xs uppercase tracking-widest">Close</button>
@@ -768,6 +780,7 @@
       let isLogSubmitting = false;
       let isPrelogCaptureBusy = false;
       let paymentPollInterval = null;
+      let requiredPaymentPackage = null;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -795,16 +808,11 @@
         return String(value || "").replace(/\D/g, "").trim();
       }
 
-      function userCanLog() {
-        return !!signedInUser?.isPaid;
-      }
-
       function refreshPaymentUi() {
         const paymentPill = document.getElementById('payment-pill-home');
         const logBtn = document.getElementById('btn-home-log');
         if (!paymentPill || !logBtn) return;
-        paymentPill.classList.toggle('hidden', userCanLog());
-        logBtn.classList.toggle('opacity-60', !userCanLog());
+        paymentPill.classList.toggle('hidden', !!signedInUser?.isPaid);
       }
 
       function setButtonLoading(button, isLoading, loadingLabel) {
@@ -862,9 +870,17 @@
         document.getElementById('modal-payment').classList.add('hidden');
       }
 
-      function openPaymentModal(accountNumber) {
+      function packageCovers(currentPackage, requiredPackage) {
+        const currentRank = PACKAGE_RANK[currentPackage] || 0;
+        const requiredRank = PACKAGE_RANK[requiredPackage] || 0;
+        return currentRank >= requiredRank;
+      }
+
+      function openPaymentModal(accountNumber, requiredPackage) {
+        requiredPaymentPackage = requiredPackage || requiredPaymentPackage || "Basic";
         document.getElementById('payment-account-number').innerText = accountNumber || "-";
         document.getElementById('payment-status-text').innerText = "Waiting for payment confirmation...";
+        document.getElementById('payment-required-package').innerText = `Required plan: ${requiredPaymentPackage}`;
         document.getElementById('modal-payment').classList.remove('hidden');
       }
 
@@ -875,13 +891,19 @@
           const resp = await checkPaymentStatus(signedInUser.phone || "", "");
           const paid = !!(resp?.isPaid || resp?.user?.isPaid);
           if (paid) {
-            stopPaymentPolling();
             signedInUser.isPaid = true;
             signedInUser.package = resp?.package || resp?.user?.package || signedInUser.package || "Basic";
+            signedInUser.virtualAccountNumber = resp?.virtualAccountNumber || resp?.user?.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
             unlockedPackage = signedInUser.package;
+            refreshPaymentUi();
+            if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
+              statusEl.innerText = `Payment found for ${signedInUser.package}. Required plan is ${requiredPaymentPackage || "Basic"}.`;
+              return false;
+            }
+            stopPaymentPolling();
             statusEl.innerText = "Payment confirmed. Logging unlocked.";
             closePaymentModal();
-            refreshPaymentUi();
+            requiredPaymentPackage = null;
             return true;
           }
           statusEl.innerText = "Not paid yet. We will keep checking every 5 seconds.";
@@ -1453,11 +1475,6 @@
       }
 
       function handleLogNav() {
-        if (!userCanLog()) {
-          openPaymentModal(signedInUser.virtualAccountNumber || "");
-          startPaymentPolling();
-          return;
-        }
         if (currentActive) showScreen('screen-active');
         else showScreen('screen-log-form');
       }
@@ -2076,14 +2093,7 @@
       document.getElementById('nav-log').onclick = handleLogNav;
 
       // Home card button
-      document.getElementById('btn-home-log').onclick = () => {
-        if (!userCanLog()) {
-          openPaymentModal(signedInUser.virtualAccountNumber || "");
-          startPaymentPolling();
-          return;
-        }
-        showScreen('screen-log-form');
-      };
+      document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
 
       // Active card click
       document.getElementById('active-meetup-card-home').onclick = () => {
@@ -2116,17 +2126,15 @@
       // Upgrade modal buttons
       document.getElementById('btn-upgrade-later').onclick = closeUpgradeModal;
       document.getElementById('btn-upgrade-paid').onclick = () => {
-        // simulate unlock to the package required by what user attempted
-        if (pendingUpgradeTarget) unlockedPackage = pendingUpgradeTarget;
+        // start real payment verification for required package
         closeUpgradeModal();
-
-        // reflect package in active screen text (optional but useful)
-        const protectionText = document.getElementById('protection-text');
-        protectionText.innerText =
-          `The "SafeMeet ${unlockedPackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
-        alert(`Unlocked: ${unlockedPackage}`);
+        openPaymentModal(signedInUser.virtualAccountNumber || "", pendingUpgradeTarget || "Basic");
+        startPaymentPolling();
       };
-      document.getElementById('btn-payment-close').onclick = closePaymentModal;
+      document.getElementById('btn-payment-close').onclick = () => {
+        stopPaymentPolling();
+        closePaymentModal();
+      };
       document.getElementById('btn-payment-refresh').onclick = verifyPaymentNow;
 
       // Auth submit
@@ -2184,13 +2192,8 @@
         }
 
         finalizeSigninUi();
-        if (!userCanLog()) {
-          openPaymentModal(signedInUser.virtualAccountNumber || "");
-          startPaymentPolling();
-        } else {
-          stopPaymentPolling();
-          closePaymentModal();
-        }
+        stopPaymentPolling();
+        closePaymentModal();
       };
 
       // Profile save
@@ -2277,13 +2280,30 @@
       // Log form submit => capture photo first, then start watch
       document.getElementById('log-form').onsubmit = async (e) => {
         e.preventDefault();
-        if (!userCanLog()) {
-          openPaymentModal(signedInUser.virtualAccountNumber || "");
-          startPaymentPolling();
-          return;
-        }
         if (isLogSubmitting) return;
         if (!validateLogForm()) return;
+        const packageSelect = document.getElementById('log-package');
+        const selectedPackage = packageSelect.value;
+        if (!selectedPackage) {
+          setFieldError(packageSelect, "Please select a package");
+          return;
+        }
+        try {
+          const statusResp = await checkPaymentStatus(signedInUser.phone || "", "");
+          signedInUser.isPaid = !!(statusResp?.isPaid || statusResp?.user?.isPaid);
+          signedInUser.package = statusResp?.package || statusResp?.user?.package || signedInUser.package || "Basic";
+          signedInUser.virtualAccountNumber = statusResp?.virtualAccountNumber || statusResp?.user?.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
+          unlockedPackage = signedInUser.package;
+          refreshPaymentUi();
+          if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
+            openPaymentModal(signedInUser.virtualAccountNumber || "", selectedPackage);
+            startPaymentPolling();
+            return;
+          }
+        } catch (err) {
+          setFieldError(packageSelect, "Could not verify payment. Please try again.");
+          return;
+        }
         isLogSubmitting = true;
         const logSubmitBtn = document.getElementById('btn-log-submit');
         setButtonLoading(logSubmitBtn, true, "Saving...");
