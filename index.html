@@ -624,9 +624,9 @@
             <div class="rounded-2xl border border-blue-100 p-4 bg-white">
               <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Packages</p>
               <ul class="mt-2 text-xs text-slate-600 space-y-1">
-                <li><span class="font-black text-blue-900">Basic:</span> Just log basic stranger details</li>
-                <li><span class="font-black text-blue-900">Standard:</span> Basic + GPS</li>
-                <li><span class="font-black text-blue-900">Confidence Plus:</span> Basic + GPS + Pictures</li>
+                <li><span class="font-black text-blue-900">Basic (₦500):</span> Just log basic stranger details</li>
+                <li><span class="font-black text-blue-900">Standard (₦1,000):</span> Basic + GPS</li>
+                <li><span class="font-black text-blue-900">Confidence Plus (₦2,500):</span> Basic + GPS + Pictures</li>
               </ul>
             </div>
 
@@ -794,7 +794,7 @@
       let toastVisibleTimeout = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
-      const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1500, "Confidence Plus": 2500 };
+      const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
 
       const stateSel = document.getElementById('state-select');
       const lgaSel = document.getElementById('lga-select');
@@ -805,6 +805,13 @@
 
       function normalizePhone(value) {
         return String(value || "").replace(/\D/g, "").trim();
+      }
+
+      function phoneKey(value) {
+        const digits = normalizePhone(value);
+        if (!digits) return "";
+        if (digits.length > 10) return digits.slice(-10);
+        return digits;
       }
 
       function normalizePin(value) {
@@ -839,8 +846,10 @@
         const directTotals = [
           resp?.totalPaid, resp?.total_paid, resp?.amountPaid, resp?.amount_paid,
           resp?.totalAmount, resp?.total_amount, resp?.paidTotal, resp?.paid_total,
+          resp?.lastPaymentAmount, resp?.last_payment_amount,
           user?.totalPaid, user?.total_paid, user?.amountPaid, user?.amount_paid,
-          user?.totalAmount, user?.total_amount, user?.paidTotal, user?.paid_total
+          user?.totalAmount, user?.total_amount, user?.paidTotal, user?.paid_total,
+          user?.lastPaymentAmount, user?.last_payment_amount
         ].map(extractNumber);
         let totalPaid = Math.max(0, ...directTotals);
 
@@ -950,6 +959,7 @@
           refreshPaymentUi();
           try {
             await updateUserInDb(signedInUser.phone, {
+              phone_key: phoneKey(signedInUser.phone),
               package: signedInUser.package,
               is_paid: signedInUser.isPaid,
               paid_total: signedInUser.paidTotal,
@@ -1052,14 +1062,14 @@
       }
 
       function findUserByPhone(rows, phone) {
-        const targetPhone = normalizePhone(phone);
-        return rows.find((u) => normalizePhone(u?.phone) === targetPhone) || null;
+        const targetPhone = phoneKey(phone);
+        return rows.find((u) => phoneKey(u?.phone) === targetPhone) || null;
       }
 
       function findUserByPhoneAndPin(rows, phone, pin) {
-        const targetPhone = normalizePhone(phone);
+        const targetPhone = phoneKey(phone);
         const targetPin = normalizePin(pin);
-        return rows.find((u) => normalizePhone(u?.phone) === targetPhone && normalizePin(u?.pin) === targetPin) || null;
+        return rows.find((u) => phoneKey(u?.phone) === targetPhone && normalizePin(u?.pin) === targetPin) || null;
       }
 
       async function readUsersByPhone(phone) {
@@ -1076,12 +1086,15 @@
               sheet: "Users"
             });
           } catch (_) {
-            return { status: "success", data: [] };
+            throw new Error("Unable to read user database");
           }
         }
       }
 
       async function createUserInDb(data) {
+        const existingResp = await readUsersByPhone(data?.phone || "");
+        const existing = findUserByPhone(extractRows(existingResp), data?.phone || "");
+        if (existing) return { status: "exists", data: existing };
         return sendToBackend({
           action: "create",
           sheet: "Users",
@@ -1091,10 +1104,19 @@
 
       async function updateUserInDb(phone, data) {
         if (!normalizePhone(phone)) return { status: "skipped" };
+        let filters = { phone };
+        try {
+          const readResp = await readUsersByPhone(phone);
+          const found = findUserByPhone(extractRows(readResp), phone);
+          if (found?.id) filters = { id: found.id };
+          else if (found?.phone) filters = { phone: found.phone };
+        } catch (_) {
+          // fallback to passed phone filter
+        }
         return sendToBackend({
           action: "update",
           sheet: "Users",
-          filters: { phone },
+          filters,
           data
         });
       }
@@ -1109,12 +1131,27 @@
 
       async function restoreActiveMeetupForUser() {
         try {
-          const resp = await sendToBackend({
-            action: "read",
-            sheet: "Meetups",
-            filters: { user_phone: signedInUser.phone, status: "ACTIVE_WATCH" }
-          });
-          const rows = extractRows(resp);
+          let rows = [];
+          try {
+            const resp = await sendToBackend({
+              action: "read",
+              sheet: "Meetups",
+              filters: { user_phone: signedInUser.phone, status: "ACTIVE_WATCH" }
+            });
+            rows = extractRows(resp);
+          } catch (_) {
+            rows = [];
+          }
+          if (!rows.length) {
+            const respAll = await sendToBackend({
+              action: "read",
+              sheet: "Meetups"
+            });
+            const allRows = extractRows(respAll);
+            rows = allRows.filter((r) => {
+              return String(r.status || "") === "ACTIVE_WATCH" && phoneKey(r.user_phone) === phoneKey(signedInUser.phone);
+            });
+          }
           if (!rows.length) {
             currentActive = null;
             document.getElementById('active-meetup-card-home').classList.add('hidden');
@@ -2364,9 +2401,10 @@
             const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
             const signupUser = signupResp?.user || {};
             const paymentState = normalizePaymentStatus(signupResp, signupUser?.package || "Basic");
+            const resolvedPhone = normalizePhone(signupUser?.phone || phoneInput || "");
             signedInUser = {
               name: signupUser?.name || nameInput || "User",
-              phone: normalizePhone(signupUser?.phone || phoneInput || ""),
+              phone: resolvedPhone,
               isPaid: paymentState.isPaid,
               package: paymentState.package || "Basic",
               virtualAccountNumber: signupUser?.virtualAccountNumber || paymentState.virtualAccountNumber || "",
@@ -2375,7 +2413,8 @@
             unlockedPackage = signedInUser.package || "Basic";
             try {
               await createUserInDb({
-                phone: signedInUser.phone,
+                phone: resolvedPhone,
+                phone_key: phoneKey(resolvedPhone),
                 name: signedInUser.name,
                 pin: pinInput,
                 package: signedInUser.package,
@@ -2412,6 +2451,7 @@
             try {
               await updateUserInDb(signedInUser.phone, {
                 name: signedInUser.name,
+                phone_key: phoneKey(signedInUser.phone),
                 package: signedInUser.package,
                 is_paid: signedInUser.isPaid,
                 paid_total: signedInUser.paidTotal,
@@ -2545,6 +2585,7 @@
           updateProfileUserDetails();
           try {
             await updateUserInDb(signedInUser.phone, {
+              phone_key: phoneKey(signedInUser.phone),
               package: signedInUser.package,
               is_paid: signedInUser.isPaid,
               paid_total: signedInUser.paidTotal,
