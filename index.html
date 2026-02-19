@@ -1424,6 +1424,14 @@
         return { minLon, maxLon, minLat, maxLat };
       }
 
+      function canonicalStateName(value) {
+        return String(value || "")
+          .toLowerCase()
+          .replace(/\bstate\b/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
       function buildStateGeometryPool() {
         if (stateGeometryPool.length || !window.am5geodata_nigeriaLow?.features) return;
         const pool = [];
@@ -1487,30 +1495,27 @@
       function computeStateTopCombos() {
         const out = {};
         simulatedUsers.forEach((u) => {
-          if (!out[u.state]) out[u.state] = { total: 0, logged: 0, almost: 0 };
-          out[u.state].total += 1;
-          if (u.remainingMins <= 120) out[u.state].almost += 1;
-          else out[u.state].logged += 1;
+          const key = canonicalStateName(u.state);
+          if (!out[key]) out[key] = { total: 0, logged: 0, almost: 0 };
+          out[key].total += 1;
+          if (u.remainingMins <= 120) out[key].almost += 1;
+          else out[key].logged += 1;
         });
         return out;
       }
 
       function renderMap() {
         if (!polygonSeries || !dotSeries) return;
-        const stateIdMap = {
-          "Lagos": "NG-LA",
-          "Abia": "NG-AB",
-          "Adamawa": "NG-AD",
-          "Delta": "NG-DE",
-          "Kaduna": "NG-KD",
-          "Ebonyi": "NG-EB",
-          "Enugu": "NG-EN",
-          "Rivers": "NG-RI"
-        };
         const stateStats = computeStateTopCombos();
         const mapData = [];
-        Object.entries(stateIdMap).forEach(([stateName, geoId]) => {
-          const info = stateStats[stateName];
+        const features = window.am5geodata_nigeriaLow?.features || [];
+        const seen = new Set();
+        features.forEach((feature) => {
+          const geoId = feature?.id;
+          const stateName = feature?.properties?.name || geoId || "Unknown";
+          if (!geoId || seen.has(geoId)) return;
+          seen.add(geoId);
+          const info = stateStats[canonicalStateName(stateName)];
           if (!info) {
             mapData.push({
               id: geoId,
@@ -1518,14 +1523,14 @@
               value: 0,
               tooltipHTML: `<strong>${stateName}</strong><br>No active users`
             });
-          } else {
-            mapData.push({
-              id: geoId,
-              name: stateName,
-              value: info.total,
-              tooltipHTML: `<strong>${stateName}</strong><br>Total: ${info.total}<br>Green: ${info.logged}<br>Yellow: ${info.almost}`
-            });
+            return;
           }
+          mapData.push({
+            id: geoId,
+            name: stateName,
+            value: info.total,
+            tooltipHTML: `<strong>${stateName}</strong><br>Total: ${info.total}<br>Green: ${info.logged}<br>Yellow: ${info.almost}`
+          });
         });
         polygonSeries.data.setAll(mapData);
 
