@@ -190,6 +190,7 @@
         <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">SafeMeet</span>
       </div>
       <div id="user-info-reveal" class="hidden flex items-center gap-3">
+        <span id="header-user-name" class="text-xs font-black text-blue-700 uppercase tracking-widest"></span>
         <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center">
           <i class="ph-bold ph-user text-blue-600"></i>
         </div>
@@ -770,7 +771,7 @@
       let polygonSeries = null;
       let dotSeries = null;
       let stateGeometryPool = [];
-      let signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "" };
+      let signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
       let livenessStepIndex = 0;
       let livenessAutoTimer = null;
       let faceModelsLoaded = false;
@@ -781,6 +782,7 @@
       let isPrelogCaptureBusy = false;
       let paymentPollInterval = null;
       let requiredPaymentPackage = null;
+      let simulatedYellowRatio = 0.12;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -792,6 +794,7 @@
       let toastVisibleTimeout = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
+      const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1500, "Confidence Plus": 2500 };
 
       const stateSel = document.getElementById('state-select');
       const lgaSel = document.getElementById('lga-select');
@@ -810,9 +813,58 @@
 
       function refreshPaymentUi() {
         const paymentPill = document.getElementById('payment-pill-home');
-        const logBtn = document.getElementById('btn-home-log');
-        if (!paymentPill || !logBtn) return;
+        if (!paymentPill) return;
         paymentPill.classList.toggle('hidden', !!signedInUser?.isPaid);
+      }
+
+      function extractNumber(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function highestPackageFromAmount(totalPaid) {
+        const amount = extractNumber(totalPaid);
+        if (amount >= PACKAGE_MIN_PAYMENT["Confidence Plus"]) return "Confidence Plus";
+        if (amount >= PACKAGE_MIN_PAYMENT["Standard"]) return "Standard";
+        if (amount >= PACKAGE_MIN_PAYMENT["Basic"]) return "Basic";
+        return "Basic";
+      }
+
+      function rankOfPackage(pkg) {
+        return PACKAGE_RANK[pkg] || 0;
+      }
+
+      function normalizePaymentStatus(resp, fallbackPackage) {
+        const user = resp?.user || {};
+        const directTotals = [
+          resp?.totalPaid, resp?.total_paid, resp?.amountPaid, resp?.amount_paid,
+          resp?.totalAmount, resp?.total_amount, resp?.paidTotal, resp?.paid_total,
+          user?.totalPaid, user?.total_paid, user?.amountPaid, user?.amount_paid,
+          user?.totalAmount, user?.total_amount, user?.paidTotal, user?.paid_total
+        ].map(extractNumber);
+        let totalPaid = Math.max(0, ...directTotals);
+
+        const payments = Array.isArray(resp?.payments) ? resp.payments : (Array.isArray(user?.payments) ? user.payments : []);
+        if (payments.length) {
+          const sum = payments.reduce((acc, p) => {
+            return acc + extractNumber(p?.amount ?? p?.paidAmount ?? p?.value ?? p?.total);
+          }, 0);
+          if (sum > totalPaid) totalPaid = sum;
+        }
+
+        const packageFromAmount = highestPackageFromAmount(totalPaid);
+        const packageFromResp = resp?.package || user?.package || fallbackPackage || "Basic";
+        const normalizedPackage = rankOfPackage(packageFromAmount) >= rankOfPackage(packageFromResp)
+          ? packageFromAmount
+          : packageFromResp;
+
+        const isPaid = !!(resp?.isPaid || user?.isPaid || totalPaid >= PACKAGE_MIN_PAYMENT["Basic"]);
+        return {
+          isPaid,
+          package: normalizedPackage || "Basic",
+          paidTotal: totalPaid,
+          virtualAccountNumber: user?.virtualAccountNumber || resp?.virtualAccountNumber || ""
+        };
       }
 
       function setButtonLoading(button, isLoading, loadingLabel) {
@@ -889,19 +941,30 @@
         try {
           statusEl.innerText = "Checking payment status...";
           const resp = await checkPaymentStatus(signedInUser.phone || "", "");
-          const paid = !!(resp?.isPaid || resp?.user?.isPaid);
-          if (paid) {
-            signedInUser.isPaid = true;
-            signedInUser.package = resp?.package || resp?.user?.package || signedInUser.package || "Basic";
-            signedInUser.virtualAccountNumber = resp?.virtualAccountNumber || resp?.user?.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
-            unlockedPackage = signedInUser.package;
-            refreshPaymentUi();
+          const normalized = normalizePaymentStatus(resp, signedInUser.package || "Basic");
+          signedInUser.isPaid = normalized.isPaid;
+          signedInUser.package = normalized.package;
+          signedInUser.paidTotal = normalized.paidTotal;
+          signedInUser.virtualAccountNumber = normalized.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
+          unlockedPackage = signedInUser.package;
+          refreshPaymentUi();
+          try {
+            await updateUserInDb(signedInUser.phone, {
+              package: signedInUser.package,
+              is_paid: signedInUser.isPaid,
+              paid_total: signedInUser.paidTotal,
+              virtual_account_number: signedInUser.virtualAccountNumber
+            });
+          } catch (_) {
+            // non-blocking
+          }
+          if (signedInUser.isPaid) {
             if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
-              statusEl.innerText = `Payment found for ${signedInUser.package}. Required plan is ${requiredPaymentPackage || "Basic"}.`;
+              statusEl.innerText = `Paid total ₦${signedInUser.paidTotal.toLocaleString()}. Current plan ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
               return false;
             }
             stopPaymentPolling();
-            statusEl.innerText = "Payment confirmed. Logging unlocked.";
+            statusEl.innerText = `Payment confirmed. Plan: ${signedInUser.package}.`;
             closePaymentModal();
             requiredPaymentPackage = null;
             return true;
@@ -919,13 +982,14 @@
         paymentPollInterval = setInterval(verifyPaymentNow, 5000);
       }
 
-      function finalizeSigninUi() {
+      async function finalizeSigninUi() {
         updateProfileUserDetails();
         refreshPaymentUi();
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('user-info-reveal').classList.remove('hidden');
         showScreen('screen-home');
         startUsersMapPulse();
+        await restoreActiveMeetupForUser();
       }
 
       function normalizeKey(key) {
@@ -992,6 +1056,12 @@
         return rows.find((u) => normalizePhone(u?.phone) === targetPhone) || null;
       }
 
+      function findUserByPhoneAndPin(rows, phone, pin) {
+        const targetPhone = normalizePhone(phone);
+        const targetPin = normalizePin(pin);
+        return rows.find((u) => normalizePhone(u?.phone) === targetPhone && normalizePin(u?.pin) === targetPin) || null;
+      }
+
       async function readUsersByPhone(phone) {
         try {
           return await sendToBackend({
@@ -1000,10 +1070,91 @@
             filters: { phone }
           });
         } catch (_) {
-          return await sendToBackend({
+          try {
+            return await sendToBackend({
+              action: "read",
+              sheet: "Users"
+            });
+          } catch (_) {
+            return { status: "success", data: [] };
+          }
+        }
+      }
+
+      async function createUserInDb(data) {
+        return sendToBackend({
+          action: "create",
+          sheet: "Users",
+          data
+        });
+      }
+
+      async function updateUserInDb(phone, data) {
+        if (!normalizePhone(phone)) return { status: "skipped" };
+        return sendToBackend({
+          action: "update",
+          sheet: "Users",
+          filters: { phone },
+          data
+        });
+      }
+
+      function parseJsonSafe(value, fallback) {
+        try {
+          return value ? JSON.parse(value) : fallback;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      async function restoreActiveMeetupForUser() {
+        try {
+          const resp = await sendToBackend({
             action: "read",
-            sheet: "Users"
+            sheet: "Meetups",
+            filters: { user_phone: signedInUser.phone, status: "ACTIVE_WATCH" }
           });
+          const rows = extractRows(resp);
+          if (!rows.length) {
+            currentActive = null;
+            document.getElementById('active-meetup-card-home').classList.add('hidden');
+            document.getElementById('no-active-meetup').classList.remove('hidden');
+            renderMeetupDetails();
+            return;
+          }
+          const latest = rows.sort((a, b) => {
+            const ta = new Date(a.started_at || 0).getTime();
+            const tb = new Date(b.started_at || 0).getTime();
+            return tb - ta;
+          })[0];
+          const details = {
+            fullName: latest.full_name || latest.stranger_name || latest.name || "",
+            phones: parseJsonSafe(latest.phones_json, []),
+            placeType: latest.place_type || "",
+            address: latest.address || "",
+            state: latest.state || "",
+            lga: latest.lga || "",
+            selectedPackage: latest.selected_package || "Basic",
+            strangerImageDataUrls: [],
+            supportImageDataUrls: []
+          };
+          currentActive = {
+            start: Date.now(),
+            pkg: latest.selected_package || signedInUser.package || "Basic",
+            meetupId: latest.id || `local_${Date.now()}`,
+            preLogPhoto: "",
+            gpsLogs: [],
+            details,
+            updates: []
+          };
+          document.getElementById('active-meetup-card-home').classList.remove('hidden');
+          document.getElementById('no-active-meetup').classList.add('hidden');
+          document.getElementById('protection-text').innerText =
+            `The "SafeMeet ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+          renderActiveMeetupHomeCard();
+          renderMeetupDetails();
+        } catch (_) {
+          // Keep UI usable even if restore fails
         }
       }
 
@@ -1307,21 +1458,27 @@
         return null;
       }
 
-      function buildSimulatedUsers(total = 2600) {
+      function buildSimulatedUsers(total) {
+        const randomTotal = Math.floor(1800 + Math.random() * 3400);
+        const target = Number.isFinite(total) && total > 0 ? total : randomTotal;
+        simulatedYellowRatio = 0.08 + Math.random() * 0.2;
         buildStateGeometryPool();
         const users = [];
         let guard = 0;
-        while (users.length < total && guard < total * 50) {
+        while (users.length < target && guard < target * 50) {
           guard += 1;
           if (!stateGeometryPool.length) break;
           const stateShape = stateGeometryPool[Math.floor(Math.random() * stateGeometryPool.length)];
           const point = randomPointInsideState(stateShape);
           if (!point) continue;
+          const isYellow = Math.random() < simulatedYellowRatio;
           users.push({
             lat: point.lat,
             lng: point.lng,
             state: stateShape.name,
-            remainingMins: Math.floor(Math.random() * (48 * 60))
+            remainingMins: isYellow
+              ? Math.floor(Math.random() * 120)
+              : (121 + Math.floor(Math.random() * ((48 * 60) - 121)))
           });
         }
         simulatedUsers = users;
@@ -1698,6 +1855,7 @@
       function updateProfileUserDetails() {
         document.getElementById('profile-user-name').innerText = `Name: ${signedInUser.name || "-"}`;
         document.getElementById('profile-user-phone').innerText = `Phone: ${signedInUser.phone || "-"}`;
+        document.getElementById('header-user-name').innerText = signedInUser.name ? signedInUser.name : "";
       }
 
       function distance(a, b) {
@@ -1942,6 +2100,13 @@
             data: {
               user_phone: signedInUser.phone || "",
               user_name: signedInUser.name || "",
+              selected_package: activePackage,
+              full_name: pendingMeetupData?.fullName || "",
+              phones_json: JSON.stringify(pendingMeetupData?.phones || []),
+              place_type: pendingMeetupData?.placeType || "",
+              address: pendingMeetupData?.address || "",
+              state: pendingMeetupData?.state || "",
+              lga: pendingMeetupData?.lga || "",
               status: "ACTIVE_WATCH",
               started_at: new Date().toISOString(),
               ...(pendingMeetupData?.dynamicFields || {})
@@ -2183,31 +2348,73 @@
 
         try {
           if (isSignup) {
+            const existingResp = await readUsersByPhone(phoneInput);
+            const existingRows = extractRows(existingResp);
+            if (findUserByPhone(existingRows, phoneInput)) {
+              setFieldError(document.getElementById('auth-phone'), "User already exists. Please sign in.");
+              alert("User already exists. Please sign in.");
+              return;
+            }
+
             const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
             const signupUser = signupResp?.user || {};
+            const paymentState = normalizePaymentStatus(signupResp, signupUser?.package || "Basic");
             signedInUser = {
               name: signupUser?.name || nameInput || "User",
               phone: normalizePhone(signupUser?.phone || phoneInput || ""),
-              isPaid: !!signupUser?.isPaid,
-              package: signupUser?.package || "Basic",
-              virtualAccountNumber: signupUser?.virtualAccountNumber || ""
+              isPaid: paymentState.isPaid,
+              package: paymentState.package || "Basic",
+              virtualAccountNumber: signupUser?.virtualAccountNumber || paymentState.virtualAccountNumber || "",
+              paidTotal: paymentState.paidTotal
             };
             unlockedPackage = signedInUser.package || "Basic";
-          } else {
-            const statusResp = await checkPaymentStatus(phoneInput, pinInput);
-            if (String(statusResp?.status || "").toLowerCase() === "error") {
-              setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
+            try {
+              await createUserInDb({
+                phone: signedInUser.phone,
+                name: signedInUser.name,
+                pin: pinInput,
+                package: signedInUser.package,
+                is_paid: signedInUser.isPaid,
+                paid_total: signedInUser.paidTotal,
+                virtual_account_number: signedInUser.virtualAccountNumber
+              });
+            } catch (_) {
+              setFieldError(document.getElementById('auth-phone'), "Unable to save new user.");
               return;
             }
-            const statusUser = statusResp?.user || {};
+          } else {
+            const readResp = await readUsersByPhone(phoneInput);
+            const users = extractRows(readResp);
+            const foundUser = findUserByPhoneAndPin(users, phoneInput, pinInput);
+            if (!foundUser) {
+              setFieldError(document.getElementById('auth-pin'), "User not found or invalid PIN");
+              alert("User not found or invalid PIN.");
+              return;
+            }
+
+            let statusResp = {};
+            try { statusResp = await checkPaymentStatus(phoneInput, pinInput); } catch (_) { statusResp = {}; }
+            const paymentState = normalizePaymentStatus(statusResp, foundUser.package || "Basic");
             signedInUser = {
-              name: statusUser?.name || nameInput || "User",
-              phone: normalizePhone(statusUser?.phone || phoneInput || ""),
-              isPaid: !!(statusResp?.isPaid || statusUser?.isPaid),
-              package: statusResp?.package || statusUser?.package || "Basic",
-              virtualAccountNumber: statusUser?.virtualAccountNumber || statusResp?.virtualAccountNumber || ""
+              name: String(foundUser.name || nameInput || "User"),
+              phone: normalizePhone(foundUser.phone || phoneInput || ""),
+              isPaid: paymentState.isPaid,
+              package: paymentState.package || foundUser.package || "Basic",
+              virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || paymentState.virtualAccountNumber || "",
+              paidTotal: paymentState.paidTotal
             };
             unlockedPackage = signedInUser.package || "Basic";
+            try {
+              await updateUserInDb(signedInUser.phone, {
+                name: signedInUser.name,
+                package: signedInUser.package,
+                is_paid: signedInUser.isPaid,
+                paid_total: signedInUser.paidTotal,
+                virtual_account_number: signedInUser.virtualAccountNumber
+              });
+            } catch (_) {
+              // non-blocking sync failure
+            }
           }
         } catch (err) {
           setFieldError(document.getElementById('auth-phone'), err?.message || "Unable to reach server");
@@ -2219,7 +2426,7 @@
           isAuthSubmitting = false;
         }
 
-        finalizeSigninUi();
+        await finalizeSigninUi();
         stopPaymentPolling();
         closePaymentModal();
       };
@@ -2323,11 +2530,24 @@
         }
         try {
           const statusResp = await checkPaymentStatus(signedInUser.phone || "", "");
-          signedInUser.isPaid = !!(statusResp?.isPaid || statusResp?.user?.isPaid);
-          signedInUser.package = statusResp?.package || statusResp?.user?.package || signedInUser.package || "Basic";
-          signedInUser.virtualAccountNumber = statusResp?.virtualAccountNumber || statusResp?.user?.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
+          const paymentState = normalizePaymentStatus(statusResp, signedInUser.package || "Basic");
+          signedInUser.isPaid = paymentState.isPaid;
+          signedInUser.package = paymentState.package;
+          signedInUser.paidTotal = paymentState.paidTotal;
+          signedInUser.virtualAccountNumber = paymentState.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
+          updateProfileUserDetails();
+          try {
+            await updateUserInDb(signedInUser.phone, {
+              package: signedInUser.package,
+              is_paid: signedInUser.isPaid,
+              paid_total: signedInUser.paidTotal,
+              virtual_account_number: signedInUser.virtualAccountNumber
+            });
+          } catch (_) {
+            // non-blocking
+          }
           if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
             openPaymentModal(signedInUser.virtualAccountNumber || "", selectedPackage);
             startPaymentPolling();
