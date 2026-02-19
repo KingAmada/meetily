@@ -915,6 +915,36 @@
         return String(value || "").replace(/\D/g, "").trim();
       }
 
+      function normalizeLocalPhone(value) {
+        const digits = normalizePhone(value);
+        if (!digits) return "";
+        if (digits.length === 10) return `0${digits}`;
+        if (digits.length === 11 && digits.startsWith("0")) return digits;
+        if (digits.length === 13 && digits.startsWith("234")) return `0${digits.slice(-10)}`;
+        if (digits.length > 11) return `0${digits.slice(-10)}`;
+        return digits;
+      }
+
+      function paymentPhoneCandidates(value) {
+        const digits = normalizePhone(value);
+        const set = new Set();
+        if (!digits) return [];
+        set.add(digits);
+        if (digits.length === 11 && digits.startsWith("0")) {
+          set.add(digits.slice(1)); // 903...
+          set.add(`234${digits.slice(1)}`); // 234903...
+        }
+        if (digits.length === 10) {
+          set.add(`0${digits}`);
+          set.add(`234${digits}`);
+        }
+        if (digits.length === 13 && digits.startsWith("234")) {
+          set.add(`0${digits.slice(-10)}`);
+          set.add(digits.slice(-10));
+        }
+        return Array.from(set);
+      }
+
       function phoneKey(value) {
         const digits = normalizePhone(value);
         if (!digits) return "";
@@ -1037,17 +1067,26 @@
       }
 
       async function checkPaymentStatus(phone, pin) {
-        const query = new URLSearchParams({ phone: normalizePhone(phone) });
-        if (pin) query.set("pin", normalizePin(pin));
-        const ctl = new AbortController();
-        const t = setTimeout(() => ctl.abort(), 7000);
-        const res = await fetch(`${PEYGO_API}/apiSafeMeetStatus?${query.toString()}`, {
-          cache: "no-store",
-          signal: ctl.signal
-        }).finally(() => clearTimeout(t));
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.message || "Unable to verify payment");
-        return data;
+        const candidates = paymentPhoneCandidates(phone);
+        let lastErr = null;
+        for (const p of candidates) {
+          const query = new URLSearchParams({ phone: p });
+          if (pin) query.set("pin", normalizePin(pin));
+          const ctl = new AbortController();
+          const t = setTimeout(() => ctl.abort(), 7000);
+          const res = await fetch(`${PEYGO_API}/apiSafeMeetStatus?${query.toString()}`, {
+            cache: "no-store",
+            signal: ctl.signal
+          }).finally(() => clearTimeout(t));
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) return data;
+          if (res.status === 404) {
+            lastErr = new Error("Payment status endpoint not found (404)");
+            continue;
+          }
+          lastErr = new Error(data?.message || "Unable to verify payment");
+        }
+        throw lastErr || new Error("Unable to verify payment");
       }
 
       function stopPaymentPolling() {
@@ -1110,7 +1149,8 @@
           statusEl.innerText = "Not paid yet. We will keep checking every 5 seconds.";
           return false;
         } catch (_) {
-          statusEl.innerText = "Could not verify right now. Tap Check Now again.";
+          stopPaymentPolling();
+          statusEl.innerText = "Payment check service unavailable. Tap Check Now after backend is fixed.";
           return false;
         }
       }
@@ -2583,7 +2623,7 @@
             const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
             const signupUser = signupResp?.user || {};
             const paymentState = normalizePaymentStatus(signupResp, signupUser?.package || "Basic");
-            const resolvedPhone = normalizePhone(signupUser?.phone || phoneInput || "");
+            const resolvedPhone = normalizeLocalPhone(signupUser?.phone || phoneInput || "");
             signedInUser = {
               name: signupUser?.name || nameInput || "User",
               phone: resolvedPhone,
@@ -2621,7 +2661,7 @@
             const localPaid = extractNumber(foundUser.paid_total || foundUser.paidTotal) > 0 || String(foundUser.is_paid || "").toLowerCase() === "true";
             signedInUser = {
               name: String(foundUser.name || nameInput || "User"),
-              phone: normalizePhone(foundUser.phone || phoneInput || ""),
+              phone: normalizeLocalPhone(foundUser.phone || phoneInput || ""),
               isPaid: localPaid,
               package: String(foundUser.package || "Basic"),
               virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || "",
