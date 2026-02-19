@@ -566,6 +566,9 @@
           <p class="text-xs font-black text-blue-400 uppercase tracking-widest">Saved FPC</p>
           <p id="fpc-summary" class="text-sm text-slate-600 mt-2">No emergency contact saved yet.</p>
         </div>
+        <button id="btn-logout" type="button" class="w-full bg-rose-50 text-rose-600 border border-rose-200 py-4 rounded-2xl font-black uppercase tracking-widest">
+          Logout
+        </button>
       </div>
 
       <!-- SCREEN: ACTIVE -->
@@ -1002,6 +1005,33 @@
         await restoreActiveMeetupForUser();
       }
 
+      function logout() {
+        stopPaymentPolling();
+        closePaymentModal();
+        closeUpgradeModal();
+        closePreLogModal();
+        closeVerifyModal();
+        clearInterval(timerInt);
+        timerInt = null;
+        stopGPSLogging();
+        currentActive = null;
+        pendingMeetupData = null;
+        preLogImageDataUrl = "";
+        requiredPaymentPackage = null;
+        unlockedPackage = "Basic";
+        signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
+        document.getElementById('app-nav').classList.add('hidden');
+        document.getElementById('user-info-reveal').classList.add('hidden');
+        document.getElementById('active-meetup-card-home').classList.add('hidden');
+        document.getElementById('no-active-meetup').classList.remove('hidden');
+        document.getElementById('meetup-update-input').value = "";
+        document.getElementById('auth-form').reset();
+        updateProfileUserDetails();
+        refreshPaymentUi();
+        renderMeetupDetails();
+        showScreen('screen-landing');
+      }
+
       function normalizeKey(key) {
         return String(key || "")
           .trim()
@@ -1073,22 +1103,25 @@
       }
 
       async function readUsersByPhone(phone) {
-        try {
-          return await sendToBackend({
-            action: "read",
-            sheet: "Users",
-            filters: { phone }
-          });
-        } catch (_) {
-          try {
-            return await sendToBackend({
-              action: "read",
-              sheet: "Users"
-            });
-          } catch (_) {
-            throw new Error("Unable to read user database");
-          }
-        }
+        // 1) Try exact match first (fast path when formats align)
+        const exact = await sendToBackend({
+          action: "read",
+          sheet: "Users",
+          filters: { phone }
+        }).catch(() => null);
+
+        const exactRows = extractRows(exact || {});
+        if (exactRows.length) return { status: "success", data: exactRows };
+
+        // 2) Fallback: read all and match using phoneKey (format-agnostic)
+        const all = await sendToBackend({
+          action: "read",
+          sheet: "Users"
+        }).catch(() => ({ status: "success", data: [] }));
+
+        const allRows = extractRows(all);
+        const matched = allRows.filter((u) => phoneKey(u?.phone) === phoneKey(phone));
+        return { status: "success", data: matched };
       }
 
       async function createUserInDb(data) {
@@ -2496,6 +2529,7 @@
         }
         alert("Profile saved.");
       };
+      document.getElementById('btn-logout').onclick = logout;
 
       document.getElementById('btn-add-update').onclick = async () => {
         if (!currentActive) {
