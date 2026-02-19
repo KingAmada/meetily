@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SafeMeet | Premium Blue Light</title>
+  <title>Meetily | Premium Safety Companion</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
@@ -17,10 +17,10 @@
 
   <style>
     :root{
-      --primary-blue:#0ea5e9;
-      --deep-blue:#0c4a6e;
-      --light-blue:#f0f9ff;
-      --vibrant-cyan:#22d3ee;
+      --primary-blue:#1e3a8a;
+      --deep-blue:#0b1538;
+      --light-blue:#eef2ff;
+      --vibrant-cyan:#60a5fa;
       --emergency-rose:#f43f5e;
       --card-white:#ffffff;
       --text-main:#0c4a6e;
@@ -60,14 +60,14 @@
     .animated-bg::before{
       width:280px;
       height:280px;
-      background:radial-gradient(circle at 30% 30%, rgba(56,189,248,.18), rgba(255,255,255,0));
+      background:radial-gradient(circle at 30% 30%, rgba(30,58,138,.16), rgba(255,255,255,0));
       top:-90px;
       left:-80px;
     }
     .animated-bg::after{
       width:340px;
       height:340px;
-      background:radial-gradient(circle at 70% 60%, rgba(56,189,248,.14), rgba(255,255,255,0));
+      background:radial-gradient(circle at 70% 60%, rgba(37,99,235,.14), rgba(255,255,255,0));
       bottom:-140px;
       right:-100px;
       animation-delay:-7s;
@@ -131,12 +131,19 @@
     }
 
     .btn-primary{
-      background:linear-gradient(135deg,#0ea5e9,#0284c7);
+      background:linear-gradient(135deg,#0b1538,#1e3a8a,#1d4ed8,#0b1538);
+      background-size:240% 240%;
+      animation:metalFlow 6.2s ease infinite;
       color:white;transition:all .3s;
-      box-shadow:0 10px 20px -5px rgba(14,165,233,0.4);
+      box-shadow:0 12px 24px -8px rgba(11,21,56,.45);
     }
-    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 30px -10px rgba(14,165,233,0.45);}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 20px 34px -12px rgba(11,21,56,.5);}
     .btn-primary:active{transform:scale(0.96);}
+    @keyframes metalFlow{
+      0%{background-position:0% 50%;}
+      50%{background-position:100% 50%;}
+      100%{background-position:0% 50%;}
+    }
     @keyframes spin{to{transform:rotate(360deg);}}
     .btn-spinner{
       display:inline-block;
@@ -168,29 +175,40 @@
       background-size:220% 100%;
       animation:shimmer 4s linear infinite;
     }
-    .package-grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:10px;}
-    .package-option{
-      text-align:left;
-      width:100%;
-      border-radius:16px;
-      border:1px solid rgba(14,165,233,.2);
+    .package-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    .package-pill{
+      border-radius:12px;
+      border:1px solid rgba(30,58,138,.18);
+      background:rgba(255,255,255,.88);
+      padding:9px 8px;
+      text-align:center;
+      transition:all .22s ease;
+      box-shadow:0 6px 18px -14px rgba(11,21,56,.45);
+    }
+    .package-pill .name{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#1e3a8a;}
+    .package-pill .price{font-size:13px;font-weight:900;color:#0f172a;margin-top:2px;}
+    .package-pill:hover{transform:translateY(-1px);border-color:rgba(29,78,216,.5);}
+    .package-pill.active{
+      border-color:#1d4ed8;
+      box-shadow:0 12px 24px -16px rgba(29,78,216,.8);
+      background:linear-gradient(180deg, rgba(239,246,255,.95), rgba(255,255,255,.95));
+    }
+    .package-detail{
+      margin-top:8px;
+      border-radius:12px;
+      border:1px solid rgba(30,58,138,.12);
       background:rgba(255,255,255,.72);
-      padding:12px 14px;
-      transition:all .28s ease;
-      position:relative;
-      overflow:hidden;
-      box-shadow:0 10px 24px -18px rgba(2,132,199,.48);
-      backdrop-filter: blur(10px);
+      padding:10px 12px;
+      font-size:11px;
+      color:#334155;
+      line-height:1.35;
+      min-height:42px;
     }
-    .package-option:hover{transform:translateY(-1px);border-color:rgba(14,165,233,.46);}
-    .package-option.active{
-      border-color:rgba(14,165,233,.75);
-      box-shadow:0 18px 30px -20px rgba(2,132,199,.7);
-      transform:translateY(-1px);
+    button:disabled{
+      opacity:.62;
+      cursor:not-allowed;
+      filter:saturate(.72);
     }
-    .package-option .pkg-name{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#075985;}
-    .package-option .pkg-price{font-size:22px;font-weight:900;color:#0f172a;line-height:1.1;margin-top:4px;}
-    .package-option .pkg-desc{font-size:11px;color:#475569;margin-top:6px;}
 
     /* Social Proof Toast */
     #social-proof-toast{
@@ -257,7 +275,7 @@
     <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100">
       <div class="flex items-center gap-2">
         <i class="ph-bold ph-shield-check text-cyan-500 text-2xl"></i>
-        <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">SafeMeet</span>
+        <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">Meetily</span>
       </div>
       <div id="user-info-reveal" class="hidden flex items-center gap-3">
         <span id="header-user-name" class="text-xs font-black text-blue-700 uppercase tracking-widest"></span>
@@ -363,7 +381,7 @@
           <h2 class="text-2xl font-black text-blue-900 text-center">What Our Users Say</h2>
           <div class="grid gap-6">
             <div class="stat-card p-8 border-l-8 border-blue-500">
-              <p class="text-sm text-slate-600 italic leading-relaxed">"As a frequent solo business traveler, SafeMeet is a non-negotiable part of my routine. It gives my family incredible peace of mind. I feel so much safer."</p>
+              <p class="text-sm text-slate-600 italic leading-relaxed">"As a frequent solo business traveler, Meetily is a non-negotiable part of my routine. It gives my family incredible peace of mind. I feel so much safer."</p>
               <div class="mt-6 flex items-center gap-4">
                 <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" class="w-12 h-12 rounded-full border-4 border-blue-50 shadow-md" alt="Jessica">
                 <div>
@@ -510,23 +528,21 @@
               <option value="Confidence Plus">Confidence Plus</option>
             </select>
             <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Payment is verified at log submission.</p>
-            <div id="package-options" class="package-grid mt-2">
-              <button type="button" class="package-option glass-shimmer" data-package="Basic">
-                <p class="pkg-name">Basic</p>
-                <p class="pkg-price">N500</p>
-                <p class="pkg-desc">Best for quick logging: stranger details only.</p>
+            <div id="package-options" class="package-choices mt-2">
+              <button type="button" class="package-pill" data-package="Basic">
+                <p class="name">Basic</p>
+                <p class="price">N500</p>
               </button>
-              <button type="button" class="package-option glass-shimmer" data-package="Standard">
-                <p class="pkg-name">Standard</p>
-                <p class="pkg-price">N1,000</p>
-                <p class="pkg-desc">Adds live GPS tracking throughout the meetup.</p>
+              <button type="button" class="package-pill" data-package="Standard">
+                <p class="name">Standard</p>
+                <p class="price">N1,000</p>
               </button>
-              <button type="button" class="package-option glass-shimmer" data-package="Confidence Plus">
-                <p class="pkg-name">Confidence Plus</p>
-                <p class="pkg-price">N2,500</p>
-                <p class="pkg-desc">Full safety mode: GPS + visual evidence uploads.</p>
+              <button type="button" class="package-pill" data-package="Confidence Plus">
+                <p class="name">C Plus</p>
+                <p class="price">N2,500</p>
               </button>
             </div>
+            <div id="package-detail" class="package-detail">Select a package to preview what it includes.</div>
           </div>
 
           <div class="space-y-4">
@@ -673,7 +689,7 @@
           <div class="stat-card p-6 border-t-4 border-blue-500">
             <h3 class="text-xs font-black text-blue-900 uppercase tracking-[0.2em] mb-4">Current Protection</h3>
             <p id="protection-text" class="text-sm text-slate-500 leading-relaxed italic">
-              The "SafeMeet Basic" switch is active. We will notify the authorities if you don't verify by the deadline.
+              The "Meetily Basic" switch is active. We will notify the authorities if you don't verify by the deadline.
             </p>
           </div>
 
@@ -702,7 +718,7 @@
 
           <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100">
             <p class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-3">Transfer to Upgrade</p>
-            <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Safe Meet</span></p>
+            <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Meetily</span></p>
             <p class="text-xs font-bold text-blue-900 mt-1">Bank: <span class="font-black">Stanbic IBTC</span></p>
             <p class="text-2xl font-black text-blue-600 mt-2">5770901212</p>
           </div>
@@ -882,6 +898,11 @@
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
+      const PACKAGE_META = {
+        "Basic": "Best for quick logging. Includes stranger details only (no live GPS, no image evidence).",
+        "Standard": "Adds live GPS tracking during your active meetup. Recommended for most users.",
+        "Confidence Plus": "Full safety mode: live GPS + image evidence uploads for stronger records."
+      };
 
       const stateSel = document.getElementById('state-select');
       const lgaSel = document.getElementById('lga-select');
@@ -911,9 +932,11 @@
 
       function syncPackageOptionCards() {
         const selected = document.getElementById('log-package')?.value || "";
-        document.querySelectorAll('#package-options .package-option').forEach((el) => {
+        document.querySelectorAll('#package-options .package-pill').forEach((el) => {
           el.classList.toggle('active', el.dataset.package === selected);
         });
+        const detail = document.getElementById('package-detail');
+        if (detail) detail.innerText = PACKAGE_META[selected] || "Select a package to preview what it includes.";
       }
 
       function setSelectedPackage(pkg) {
@@ -1016,7 +1039,12 @@
       async function checkPaymentStatus(phone, pin) {
         const query = new URLSearchParams({ phone: normalizePhone(phone) });
         if (pin) query.set("pin", normalizePin(pin));
-        const res = await fetch(`${PEYGO_API}/apiSafeMeetStatus?${query.toString()}`, { cache: "no-store" });
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 7000);
+        const res = await fetch(`${PEYGO_API}/apiSafeMeetStatus?${query.toString()}`, {
+          cache: "no-store",
+          signal: ctl.signal
+        }).finally(() => clearTimeout(t));
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.message || "Unable to verify payment");
         return data;
@@ -1092,14 +1120,14 @@
         paymentPollInterval = setInterval(verifyPaymentNow, 5000);
       }
 
-      async function finalizeSigninUi() {
+      function finalizeSigninUi() {
         updateProfileUserDetails();
         refreshPaymentUi();
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('user-info-reveal').classList.remove('hidden');
         showScreen('screen-home');
         startUsersMapPulse();
-        await restoreActiveMeetupForUser();
+        restoreActiveMeetupForUser().catch(() => {});
       }
 
       function logout() {
@@ -1127,6 +1155,32 @@
         refreshPaymentUi();
         renderMeetupDetails();
         showScreen('screen-landing');
+      }
+
+      function armActionButtonLocks() {
+        const actionIds = [
+          "btn-home-log", "btn-add-phone", "btn-gps", "btn-img-stranger", "btn-img-support",
+          "btn-upgrade-paid", "btn-payment-refresh", "btn-add-update", "btn-end-meetup",
+          "btn-verify-capture", "btn-capture-prelog", "btn-log-submit", "auth-submit-btn"
+        ];
+        actionIds.forEach((id) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          btn.addEventListener('click', (e) => {
+            if (btn.disabled) return;
+            if (btn.dataset.locked === "1") {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return;
+            }
+            btn.dataset.locked = "1";
+            btn.classList.add('opacity-80');
+            setTimeout(() => {
+              btn.dataset.locked = "0";
+              btn.classList.remove('opacity-80');
+            }, 900);
+          }, true);
+        });
       }
 
       function normalizeKey(key) {
@@ -1200,31 +1254,24 @@
       }
 
       async function readUsersByPhone(phone) {
-        // 1) Try exact match first (fast path when formats align)
-        const exact = await sendToBackend({
-          action: "read",
-          sheet: "Users",
-          filters: { phone }
-        }).catch(() => null);
-
-        const exactRows = extractRows(exact || {});
-        if (exactRows.length) return { status: "success", data: exactRows };
-
-        // 2) Fallback: read all and match using phoneKey (format-agnostic)
+        // Single backend call to avoid lock contention in Apps Script.
         const all = await sendToBackend({
           action: "read",
           sheet: "Users"
-        }).catch(() => ({ status: "success", data: [] }));
-
+        });
         const allRows = extractRows(all);
-        const matched = allRows.filter((u) => phoneKey(u?.phone) === phoneKey(phone));
+        const target = phoneKey(phone);
+        const matched = allRows.filter((u) => phoneKey(u?.phone) === target);
         return { status: "success", data: matched };
       }
 
-      async function createUserInDb(data) {
-        const existingResp = await readUsersByPhone(data?.phone || "");
-        const existing = findUserByPhone(extractRows(existingResp), data?.phone || "");
-        if (existing) return { status: "exists", data: existing };
+      async function createUserInDb(data, options = {}) {
+        const skipExistsCheck = !!options.skipExistsCheck;
+        if (!skipExistsCheck) {
+          const existingResp = await readUsersByPhone(data?.phone || "");
+          const existing = findUserByPhone(extractRows(existingResp), data?.phone || "");
+          if (existing) return { status: "exists", data: existing };
+        }
         return sendToBackend({
           action: "create",
           sheet: "Users",
@@ -1234,19 +1281,18 @@
 
       async function updateUserInDb(phone, data) {
         if (!normalizePhone(phone)) return { status: "skipped" };
-        let filters = { phone };
-        try {
-          const readResp = await readUsersByPhone(phone);
-          const found = findUserByPhone(extractRows(readResp), phone);
-          if (found?.id) filters = { id: found.id };
-          else if (found?.phone) filters = { phone: found.phone };
-        } catch (_) {
-          // fallback to passed phone filter
-        }
+        const key = phoneKey(phone);
+        const byKey = await sendToBackend({
+          action: "update",
+          sheet: "Users",
+          filters: { phone_key: key },
+          data
+        }).catch(() => null);
+        if (byKey && extractNumber(byKey.updated) > 0) return byKey;
         return sendToBackend({
           action: "update",
           sheet: "Users",
-          filters,
+          filters: { phone },
           data
         });
       }
@@ -1317,7 +1363,7 @@
           document.getElementById('active-meetup-card-home').classList.remove('hidden');
           document.getElementById('no-active-meetup').classList.add('hidden');
           document.getElementById('protection-text').innerText =
-            `The "SafeMeet ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+          `The "Meetily ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
           renderActiveMeetupHomeCard();
           renderMeetupDetails();
         } catch (_) {
@@ -2301,7 +2347,7 @@
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
         document.getElementById('no-active-meetup').classList.add('hidden');
         document.getElementById('protection-text').innerText =
-          `The "SafeMeet ${activePackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+          `The "Meetily ${activePackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
         renderActiveMeetupHomeCard();
         renderMeetupDetails();
         startTimer();
@@ -2423,7 +2469,7 @@
         document.getElementById('meetup-update-input').value = "";
 
         showScreen('screen-home');
-        alert("SafeMeet: Data permanently deleted. Meetup secured.");
+        alert("Meetily: Data permanently deleted. Meetup secured.");
       }
 
       function startTimer() {
@@ -2459,11 +2505,12 @@
       // Home card button
       document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
 
-      document.querySelectorAll('#package-options .package-option').forEach((btn) => {
+      document.querySelectorAll('#package-options .package-pill').forEach((btn) => {
         btn.onclick = () => setSelectedPackage(btn.dataset.package || "");
       });
       document.getElementById('log-package').onchange = syncPackageOptionCards;
       syncPackageOptionCards();
+      armActionButtonLocks();
 
       // Active card click
       document.getElementById('active-meetup-card-home').onclick = () => {
@@ -2556,7 +2603,7 @@
                 is_paid: signedInUser.isPaid,
                 paid_total: signedInUser.paidTotal,
                 virtual_account_number: signedInUser.virtualAccountNumber
-              });
+              }, { skipExistsCheck: true });
             } catch (_) {
               setFieldError(document.getElementById('auth-phone'), "Unable to save new user.");
               return;
@@ -2571,30 +2618,35 @@
               return;
             }
 
-            let statusResp = {};
-            try { statusResp = await checkPaymentStatus(phoneInput, pinInput); } catch (_) { statusResp = {}; }
-            const paymentState = normalizePaymentStatus(statusResp, foundUser.package || "Basic");
+            const localPaid = extractNumber(foundUser.paid_total || foundUser.paidTotal) > 0 || String(foundUser.is_paid || "").toLowerCase() === "true";
             signedInUser = {
               name: String(foundUser.name || nameInput || "User"),
               phone: normalizePhone(foundUser.phone || phoneInput || ""),
-              isPaid: paymentState.isPaid,
-              package: paymentState.package || foundUser.package || "Basic",
-              virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || paymentState.virtualAccountNumber || "",
-              paidTotal: paymentState.paidTotal
+              isPaid: localPaid,
+              package: String(foundUser.package || "Basic"),
+              virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || "",
+              paidTotal: extractNumber(foundUser.paid_total || foundUser.paidTotal)
             };
             unlockedPackage = signedInUser.package || "Basic";
-            try {
-              await updateUserInDb(signedInUser.phone, {
-                name: signedInUser.name,
-                phone_key: phoneKey(signedInUser.phone),
-                package: signedInUser.package,
-                is_paid: signedInUser.isPaid,
-                paid_total: signedInUser.paidTotal,
-                virtual_account_number: signedInUser.virtualAccountNumber
-              });
-            } catch (_) {
-              // non-blocking sync failure
-            }
+            checkPaymentStatus(phoneInput, pinInput)
+              .then((statusResp) => {
+                const paymentState = normalizePaymentStatus(statusResp, signedInUser.package || "Basic");
+                signedInUser.isPaid = paymentState.isPaid;
+                signedInUser.package = paymentState.package;
+                signedInUser.paidTotal = paymentState.paidTotal;
+                signedInUser.virtualAccountNumber = paymentState.virtualAccountNumber || signedInUser.virtualAccountNumber;
+                unlockedPackage = signedInUser.package;
+                updateProfileUserDetails();
+                updateUserInDb(signedInUser.phone, {
+                  name: signedInUser.name,
+                  phone_key: phoneKey(signedInUser.phone),
+                  package: signedInUser.package,
+                  is_paid: signedInUser.isPaid,
+                  paid_total: signedInUser.paidTotal,
+                  virtual_account_number: signedInUser.virtualAccountNumber
+                }).catch(() => {});
+              })
+              .catch(() => {});
           }
         } catch (err) {
           setFieldError(document.getElementById('auth-phone'), err?.message || "Unable to reach server");
@@ -2606,7 +2658,7 @@
           isAuthSubmitting = false;
         }
 
-        await finalizeSigninUi();
+        finalizeSigninUi();
         stopPaymentPolling();
         closePaymentModal();
       };
@@ -2698,15 +2750,22 @@
         e.preventDefault();
         if (isLogSubmitting) return;
         if (!validateLogForm()) return;
+        isLogSubmitting = true;
+        const logSubmitBtn = document.getElementById('btn-log-submit');
+        setButtonLoading(logSubmitBtn, true, "Checking...");
         const packageSelect = document.getElementById('log-package');
         const selectedPackage = packageSelect.value;
         if (!selectedPackage) {
           setFieldError(packageSelect, "Please select a package");
+          isLogSubmitting = false;
+          setButtonLoading(logSubmitBtn, false);
           return;
         }
         const featureRequiredPackage = requiredPackageFromFeatures();
         if (!packageCovers(selectedPackage, featureRequiredPackage)) {
           setFieldError(packageSelect, `Selected package must be ${featureRequiredPackage} or higher for chosen features`);
+          isLogSubmitting = false;
+          setButtonLoading(logSubmitBtn, false);
           return;
         }
         try {
@@ -2733,15 +2792,17 @@
           if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
             openPaymentModal(signedInUser.virtualAccountNumber || "", selectedPackage);
             startPaymentPolling();
+            isLogSubmitting = false;
+            setButtonLoading(logSubmitBtn, false);
             return;
           }
           unlockedPackage = selectedPackage;
         } catch (err) {
           setFieldError(packageSelect, "Could not verify payment. Please try again.");
+          isLogSubmitting = false;
+          setButtonLoading(logSubmitBtn, false);
           return;
         }
-        isLogSubmitting = true;
-        const logSubmitBtn = document.getElementById('btn-log-submit');
         setButtonLoading(logSubmitBtn, true, "Saving...");
         try {
           pendingMeetupData = await collectMeetupDataFromForm();
