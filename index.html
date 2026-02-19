@@ -373,9 +373,6 @@
             <button id="btn-home-log" class="btn-primary px-10 py-3 rounded-2xl font-bold text-sm">
               Log New Meetup
             </button>
-            <p id="payment-pill-home" class="hidden text-[10px] bg-amber-50 text-amber-700 px-3 py-2 rounded-full border border-amber-200 font-black uppercase tracking-widest">
-              Payment pending
-            </p>
             <p class="text-[11px] text-slate-500 font-semibold">Take control of your safety. You're in charge.</p>
         </div>
 
@@ -822,9 +819,7 @@
       }
 
       function refreshPaymentUi() {
-        const paymentPill = document.getElementById('payment-pill-home');
-        if (!paymentPill) return;
-        paymentPill.classList.toggle('hidden', !!signedInUser?.isPaid);
+        // Home payment pill removed; keep function as no-op for existing calls.
       }
 
       function extractNumber(value) {
