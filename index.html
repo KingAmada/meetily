@@ -30,7 +30,7 @@
 
     body{
       font-family:'Inter',sans-serif;
-      background:#f8fafc;
+      background:#ffffff;
       color:var(--text-main);
       min-height:100vh;
     }
@@ -41,9 +41,40 @@
       100%{background-position:0% 50%;}
     }
     .animated-bg{
-      background:linear-gradient(-45deg,#f8fafc,#e0f2fe,#f0f9ff,#ffffff);
+      position:relative;
+      background:#ffffff;
       background-size:400% 400%;
-      animation:flow 15s ease infinite;
+      animation:flow 18s ease infinite;
+    }
+    .animated-bg::before,
+    .animated-bg::after{
+      content:"";
+      position:fixed;
+      border-radius:9999px;
+      filter:blur(12px);
+      pointer-events:none;
+      z-index:0;
+      opacity:.72;
+      animation:floatBlob 18s ease-in-out infinite;
+    }
+    .animated-bg::before{
+      width:280px;
+      height:280px;
+      background:radial-gradient(circle at 30% 30%, rgba(56,189,248,.18), rgba(255,255,255,0));
+      top:-90px;
+      left:-80px;
+    }
+    .animated-bg::after{
+      width:340px;
+      height:340px;
+      background:radial-gradient(circle at 70% 60%, rgba(56,189,248,.14), rgba(255,255,255,0));
+      bottom:-140px;
+      right:-100px;
+      animation-delay:-7s;
+    }
+    @keyframes floatBlob{
+      0%,100%{transform:translate3d(0,0,0) scale(1);}
+      50%{transform:translate3d(0,-14px,0) scale(1.05);}
     }
 
     @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
@@ -76,9 +107,10 @@
     .nav-item.active{color:var(--primary-blue);}
 
     .form-input{
-      background:#ffffff;border:1px solid #e2e8f0;color:var(--text-main);
+      background:rgba(255,255,255,.78);border:1px solid rgba(15,23,42,.1);color:var(--text-main);
       border-radius:1.25rem;padding:1.1rem;width:100%;
-      transition:all .3s;box-shadow:0 2px 4px rgba(0,0,0,0.02);
+      transition:all .3s;box-shadow:0 10px 22px -20px rgba(15,23,42,.35);
+      backdrop-filter: blur(8px);
     }
     .form-input:focus{
       outline:none;border-color:var(--primary-blue);
@@ -103,6 +135,7 @@
       color:white;transition:all .3s;
       box-shadow:0 10px 20px -5px rgba(14,165,233,0.4);
     }
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 30px -10px rgba(14,165,233,0.45);}
     .btn-primary:active{transform:scale(0.96);}
     @keyframes spin{to{transform:rotate(360deg);}}
     .btn-spinner{
@@ -118,9 +151,46 @@
     }
 
     .stat-card{
-      background:white;border:1px solid #e2e8f0;border-radius:1.5rem;
-      box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);
+      background:rgba(255,255,255,.75);
+      border:1px solid rgba(15,23,42,.08);
+      border-radius:1.5rem;
+      box-shadow:0 24px 34px -28px rgba(15,23,42,.35), 0 6px 14px -10px rgba(15,23,42,.18);
+      backdrop-filter:blur(12px);
+      transition:transform .35s ease, box-shadow .35s ease;
     }
+    .stat-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 28px 36px -26px rgba(15,23,42,.35), 0 8px 16px -12px rgba(15,23,42,.18);
+    }
+    @keyframes shimmer{0%{background-position:-100% 0;}100%{background-position:200% 0;}}
+    .glass-shimmer{
+      background:linear-gradient(100deg, rgba(255,255,255,.06) 20%, rgba(255,255,255,.32) 45%, rgba(255,255,255,.08) 70%);
+      background-size:220% 100%;
+      animation:shimmer 4s linear infinite;
+    }
+    .package-grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:10px;}
+    .package-option{
+      text-align:left;
+      width:100%;
+      border-radius:16px;
+      border:1px solid rgba(14,165,233,.2);
+      background:rgba(255,255,255,.72);
+      padding:12px 14px;
+      transition:all .28s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow:0 10px 24px -18px rgba(2,132,199,.48);
+      backdrop-filter: blur(10px);
+    }
+    .package-option:hover{transform:translateY(-1px);border-color:rgba(14,165,233,.46);}
+    .package-option.active{
+      border-color:rgba(14,165,233,.75);
+      box-shadow:0 18px 30px -20px rgba(2,132,199,.7);
+      transform:translateY(-1px);
+    }
+    .package-option .pkg-name{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#075985;}
+    .package-option .pkg-price{font-size:22px;font-weight:900;color:#0f172a;line-height:1.1;margin-top:4px;}
+    .package-option .pkg-desc{font-size:11px;color:#475569;margin-top:6px;}
 
     /* Social Proof Toast */
     #social-proof-toast{
@@ -168,7 +238,7 @@
 
 <body class="animated-bg overflow-hidden">
 
-  <div class="max-w-md mx-auto h-screen shadow-2xl overflow-hidden relative border-x border-slate-200 bg-white/20 backdrop-blur-sm">
+  <div class="max-w-md mx-auto h-screen shadow-2xl overflow-hidden relative border-x border-slate-200 bg-white/85 backdrop-blur-xl">
 
     <!-- Social Proof Toast -->
     <div id="social-proof-toast">
@@ -440,6 +510,23 @@
               <option value="Confidence Plus">Confidence Plus</option>
             </select>
             <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Payment is verified at log submission.</p>
+            <div id="package-options" class="package-grid mt-2">
+              <button type="button" class="package-option glass-shimmer" data-package="Basic">
+                <p class="pkg-name">Basic</p>
+                <p class="pkg-price">N500</p>
+                <p class="pkg-desc">Best for quick logging: stranger details only.</p>
+              </button>
+              <button type="button" class="package-option glass-shimmer" data-package="Standard">
+                <p class="pkg-name">Standard</p>
+                <p class="pkg-price">N1,000</p>
+                <p class="pkg-desc">Adds live GPS tracking throughout the meetup.</p>
+              </button>
+              <button type="button" class="package-option glass-shimmer" data-package="Confidence Plus">
+                <p class="pkg-name">Confidence Plus</p>
+                <p class="pkg-price">N2,500</p>
+                <p class="pkg-desc">Full safety mode: GPS + visual evidence uploads.</p>
+              </button>
+            </div>
           </div>
 
           <div class="space-y-4">
@@ -820,6 +907,21 @@
 
       function refreshPaymentUi() {
         // Home payment pill removed; keep function as no-op for existing calls.
+      }
+
+      function syncPackageOptionCards() {
+        const selected = document.getElementById('log-package')?.value || "";
+        document.querySelectorAll('#package-options .package-option').forEach((el) => {
+          el.classList.toggle('active', el.dataset.package === selected);
+        });
+      }
+
+      function setSelectedPackage(pkg) {
+        const pkgEl = document.getElementById('log-package');
+        if (!pkgEl) return;
+        pkgEl.value = pkg;
+        removeFieldError(pkgEl);
+        syncPackageOptionCards();
       }
 
       function extractNumber(value) {
@@ -1696,8 +1798,7 @@
         if (!pkgEl) return;
         const current = pkgEl.value || "Basic";
         if (!packageCovers(current, requiredPkg)) {
-          pkgEl.value = requiredPkg;
-          removeFieldError(pkgEl);
+          setSelectedPackage(requiredPkg);
         }
       }
 
@@ -2357,6 +2458,12 @@
 
       // Home card button
       document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
+
+      document.querySelectorAll('#package-options .package-option').forEach((btn) => {
+        btn.onclick = () => setSelectedPackage(btn.dataset.package || "");
+      });
+      document.getElementById('log-package').onchange = syncPackageOptionCards;
+      syncPackageOptionCards();
 
       // Active card click
       document.getElementById('active-meetup-card-home').onclick = () => {
