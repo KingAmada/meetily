@@ -299,8 +299,8 @@
               <p id="landing-hero-badge" class="text-white text-sm font-bold uppercase tracking-widest drop-shadow-md">Verified Secure Logging</p>
             </div>
           </div>
-          <h1 id="landing-hero-headline" class="text-4xl font-extrabold leading-tight text-blue-900">Meetup with Confidence.</h1>
-          <p id="landing-hero-subtext" class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
+          <h1 id="landing-hero-headline" class="text-4xl font-extrabold leading-tight text-blue-900">Meetily Log Meetups.</h1>
+          <p id="landing-hero-subtext" class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? logging it gives you a 48-hour safety net.</p>
           <div class="flex flex-col gap-3">
             <button id="btn-landing-signup" class="w-full btn-primary font-bold py-5 rounded-2xl shadow-xl">
               Sign Up
@@ -864,17 +864,7 @@
         "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&q=80&w=1200"
       ];
       const LANDING_HERO_HEADLINES = [
-        "Meetily Safety Alert."
-      ];
-      const LANDING_HERO_SUBTEXTS = [
-        "Meetup with Confidence",
-        "Quiet protection",
-        "Let someone know. Just in case",
-        "Safety for business meetups",
-        "Meetings with receipts",
-        "Love is blind. Meetily isn't",
-        "Don't be a statistic. Log the meetup",
-        "Log the meetup"
+        "Meetily Log Meetups."
       ];
       const LANDING_HERO_BADGES = [
         "Verified Secure Logging",
@@ -1657,7 +1647,6 @@
           image.src = LANDING_HERO_IMAGES[landingHeroIndex];
           badge.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
           headline.innerText = LANDING_HERO_HEADLINES[0];
-          subtext.innerText = LANDING_HERO_SUBTEXTS[landingHeroIndex] || LANDING_HERO_SUBTEXTS[0];
           image.classList.remove('is-changing');
         }, 220);
       }
