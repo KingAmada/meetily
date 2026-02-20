@@ -376,6 +376,41 @@
           </div>
         </div>
 
+        <div class="space-y-6">
+          <h2 class="text-2xl font-black text-rose-600 text-center">Why We Exist</h2>
+          <div class="grid grid-cols-1 gap-4">
+            <div class="bg-rose-50 border border-rose-100 p-5 rounded-[2rem]">
+              <div class="flex items-center gap-3 mb-2">
+                <i class="ph-bold ph-briefcase text-rose-600 text-xl"></i>
+                <h3 class="font-black text-blue-900 uppercase text-xs tracking-widest">The "Interview" Trap</h3>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Job seekers like <strong>Hindy Umoren</strong> were lured to fake interviews. Meetily ensures your FPC has the office address and recruiter's phone before you enter.
+              </p>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-100 p-5 rounded-[2rem]">
+              <div class="flex items-center gap-3 mb-2">
+                <i class="ph-bold ph-heart-break text-rose-600 text-xl"></i>
+                <h3 class="font-black text-blue-900 uppercase text-xs tracking-widest">The "Date" Ritual</h3>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                A woman in Ogun was murdered after being invited on a date. With Meetily, her <strong>stranger's photo and location</strong> would have been sent to the police instantly.
+              </p>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-100 p-5 rounded-[2rem]">
+              <div class="flex items-center gap-3 mb-2">
+                <i class="ph-bold ph-handshake text-rose-600 text-xl"></i>
+                <h3 class="font-black text-blue-900 uppercase text-xs tracking-widest">Business Betrayals</h3>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                From Edo to Abia, business meetings turn into kidnappings. Don't go alone without a 48-hour safety net.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Testimonials -->
         <div class="space-y-5">
           <h2 class="text-2xl font-black text-blue-900 text-center">What Our Users Say</h2>
@@ -389,11 +424,7 @@
               </div>
             </div>
           </div>
-          <div class="flex items-center justify-center gap-2">
-            <span id="testimonial-dot-0" class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span id="testimonial-dot-1" class="w-2 h-2 rounded-full bg-blue-200"></span>
-            <span id="testimonial-dot-2" class="w-2 h-2 rounded-full bg-blue-200"></span>
-          </div>
+          <div id="testimonial-dots" class="flex items-center justify-center gap-2"></div>
         </div>
 
         <div class="pb-12 text-center">
@@ -846,14 +877,21 @@
         "Meetily Log Meetups."
       ];
       const LANDING_HERO_BADGES = [
-        "Verified Secure Logging",
-        "She thought it was love. She never came back.",
-        "Chidere went out to hustle. No trace till today.",
-        "Nancy left for a business meeting. Family waited for months.",
-        "Silence after meetup is not normal.",
-        "One log can change the ending.",
-        "Delay is dangerous. Log it now.",
-        "Meetily keeps the trail when stories go dark."
+        "Hindy Umoren went for an interview. She never came back.",
+        "A 35-year-old in Ogun went on a date. It was a ritual trap.",
+        "Two sisters lured from church in Rivers. Drugged and killed.",
+        "University student murdered by a 'romantic interest.'",
+        "Ini-Ubong Umoren: Raped and murdered at a fake job site.",
+        "Joy Njoku vanished after a Rivers State job interview.",
+        "Ekiti: A man sentenced for killing a sex worker he met.",
+        "Buried in Delta: A lady killed after a night with a client.",
+        "Violent end: Sex worker killed in Akure over a refund.",
+        "Jerry Boshoga: Found dead after a business meeting.",
+        "Celine & Afiba: Missing after visiting an Abia businessman.",
+        "Betrayed: Edo businessman killed by his own employees.",
+        "Tragedy in Abuja: A woman died visiting her boyfriend.",
+        "21-year-old student stabbed to death by her partner.",
+        "Comfort Uwakwe: Disappeared visiting a boyfriend in Epe."
       ];
       const TESTIMONIALS = [
         {
@@ -879,7 +917,48 @@
           avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-indigo-400",
           accentClass: "text-indigo-500"
-        }
+        },
+        {
+          quote: "\"I run a small fashion business and meet new suppliers often. Logging details first has become my ritual for staying protected.\"",
+          name: "Amaka O.",
+          role: "Business Owner",
+          avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=150",
+          borderClass: "border-rose-400",
+          accentClass: "text-rose-500"
+        },
+        {
+          quote: "\"My younger sister travels for school events, and Meetily lets us track context if anything goes wrong. It reduces panic.\"",
+          name: "Ifeoma E.",
+          role: "Guardian",
+          avatar: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&q=80&w=150",
+          borderClass: "border-emerald-400",
+          accentClass: "text-emerald-500"
+        },
+        {
+          quote: "\"I was skeptical at first, but the package options and quick logging make it practical. It feels like safety with receipts.\"",
+          name: "Daniel K.",
+          role: "Sales Rep",
+          avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
+          borderClass: "border-amber-400",
+          accentClass: "text-amber-500"
+        },
+        {
+          quote: "\"Before every first date, I log location and contact data. It takes under a minute and gives me confidence to proceed.\"",
+          name: "Temi A.",
+          role: "Product Designer",
+          avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
+          borderClass: "border-fuchsia-400",
+          accentClass: "text-fuchsia-500"
+        },
+        {
+          quote: "\"As a dispatch rider, I meet strangers daily. Meetily helps me create a trail whenever a pickup feels off.\"",
+          name: "Uche P.",
+          role: "Logistics Rider",
+          avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150",
+          borderClass: "border-sky-400",
+          accentClass: "text-sky-500"
+        },
+        
       ];
 
       // Package rules (NO upfront selection)
@@ -925,9 +1004,9 @@
       // Social proof controller
       let toastInterval = null;
       let toastVisibleTimeout = null;
-      let landingHeroIndex = 0;
+      let landingHeroIndex = Math.floor(Math.random() * LANDING_HERO_BADGES.length);
       let landingHeroInterval = null;
-      let testimonialIndex = 0;
+      let testimonialIndex = Math.floor(Math.random() * TESTIMONIALS.length);
       let testimonialInterval = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
@@ -1648,10 +1727,11 @@
         const headline = document.getElementById('landing-hero-headline');
         const subtext = document.getElementById('landing-hero-subtext');
         if (!image || !badge || !headline || !subtext) return;
-        landingHeroIndex = nextIndex % LANDING_HERO_IMAGES.length;
+        landingHeroIndex = nextIndex % LANDING_HERO_BADGES.length;
+        const imageIndex = landingHeroIndex % LANDING_HERO_IMAGES.length;
         image.classList.add('is-changing');
         setTimeout(() => {
-          image.src = LANDING_HERO_IMAGES[landingHeroIndex];
+          image.src = LANDING_HERO_IMAGES[imageIndex];
           badge.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
           headline.innerText = LANDING_HERO_HEADLINES[0];
           image.classList.remove('is-changing');
@@ -1662,8 +1742,8 @@
         if (landingHeroInterval) clearInterval(landingHeroInterval);
         updateLandingHero(landingHeroIndex);
         landingHeroInterval = setInterval(() => {
-          updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_IMAGES.length);
-        }, 5200);
+          updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_BADGES.length);
+        }, 4000);
       }
 
       function updateTestimonial(nextIndex) {
@@ -1672,14 +1752,15 @@
         const role = document.getElementById('testimonial-role');
         const avatar = document.getElementById('testimonial-avatar');
         const card = document.getElementById('testimonial-card');
-        if (!quote || !name || !role || !avatar || !card || !TESTIMONIALS.length) return;
+        const dotsRoot = document.getElementById('testimonial-dots');
+        if (!quote || !name || !role || !avatar || !card || !dotsRoot || !TESTIMONIALS.length) return;
 
         testimonialIndex = nextIndex % TESTIMONIALS.length;
         const item = TESTIMONIALS[testimonialIndex];
 
-        card.classList.remove('border-blue-500', 'border-cyan-400', 'border-indigo-400');
+        card.classList.remove('border-blue-500', 'border-cyan-400', 'border-indigo-400', 'border-rose-400', 'border-emerald-400', 'border-amber-400', 'border-fuchsia-400', 'border-sky-400', 'border-violet-400');
         card.classList.add(item.borderClass || 'border-blue-500');
-        role.classList.remove('text-blue-400', 'text-cyan-500', 'text-indigo-500');
+        role.classList.remove('text-blue-400', 'text-cyan-500', 'text-indigo-500', 'text-rose-500', 'text-emerald-500', 'text-amber-500', 'text-fuchsia-500', 'text-sky-500', 'text-violet-500');
         role.classList.add(item.accentClass || 'text-blue-400');
 
         quote.innerText = item.quote || '';
@@ -1687,19 +1768,20 @@
         role.innerText = item.role || '';
         avatar.src = item.avatar || '';
 
-        for (let i = 0; i < TESTIMONIALS.length; i++) {
-          const dot = document.getElementById(`testimonial-dot-${i}`);
-          if (!dot) continue;
-          dot.classList.toggle('bg-blue-500', i === testimonialIndex);
-          dot.classList.toggle('bg-blue-200', i !== testimonialIndex);
-        }
+        dotsRoot.innerHTML = TESTIMONIALS.map((_, i) =>
+          `<span class="w-2 h-2 rounded-full ${i === testimonialIndex ? 'bg-blue-500' : 'bg-blue-200'}"></span>`
+        ).join('');
       }
 
       function startTestimonialsRotation() {
         if (testimonialInterval) clearInterval(testimonialInterval);
         updateTestimonial(testimonialIndex);
         testimonialInterval = setInterval(() => {
-          updateTestimonial((testimonialIndex + 1) % TESTIMONIALS.length);
+          let next = Math.floor(Math.random() * TESTIMONIALS.length);
+          if (TESTIMONIALS.length > 1 && next === testimonialIndex) {
+            next = (testimonialIndex + 1) % TESTIMONIALS.length;
+          }
+          updateTestimonial(next);
         }, 5000);
       }
 
