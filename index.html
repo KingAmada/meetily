@@ -226,10 +226,92 @@
       opacity:1;
     }
 
-    .hero-img-container{width:100%;height:220px;overflow:hidden;border-radius:2rem;position:relative;box-shadow:0 20px 25px -5px rgba(14,165,233,0.1);}
-    .hero-img-container img{width:100%;height:100%;object-fit:cover;}
-    .hero-slide-img{transition:opacity .55s ease, transform 6s ease;opacity:1;transform:scale(1);}
-    .hero-slide-img.is-changing{opacity:.2;transform:scale(1.03);}
+    /* --- FIXED 3D ENGINE --- */
+    .hero-flip-container{
+      perspective:2000px;
+      width:100%;
+      height:300px;
+      margin-bottom:1.25rem;
+    }
+    .hero-flip-inner{
+      position:relative;
+      width:100%;
+      height:100%;
+      transition:transform 1.2s cubic-bezier(0.19,1,0.22,1);
+      transform-style:preserve-3d;
+    }
+    .hero-flip-inner.flipped{transform:rotateY(-180deg);}
+    .hero-face{
+      position:absolute;
+      inset:0;
+      backface-visibility:hidden;
+      -webkit-backface-visibility:hidden;
+      border-radius:2.5rem;
+      transform-style:preserve-3d;
+    }
+    .hero-face-front{
+      transform:rotateY(0deg);
+      background:#000;
+      z-index:2;
+    }
+    .hero-bg-img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      border-radius:2.5rem;
+      opacity:1;
+      transform:translateZ(0);
+      backface-visibility:hidden;
+      -webkit-backface-visibility:hidden;
+    }
+    .hero-floating-content{
+      position:absolute;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      padding:26px;
+      transform-style:preserve-3d;
+      pointer-events:none;
+    }
+    .hero-case-tag{
+      transform:translateZ(120px);
+      background:var(--emergency-rose);
+      color:#fff;
+      padding:5px 14px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:900;
+      width:fit-content;
+      margin-bottom:12px;
+      box-shadow:0 15px 35px rgba(244,63,94,.5);
+    }
+    .hero-story{
+      transform:translateZ(80px);
+      color:#fff;
+      font-weight:900;
+      font-size:1.08rem;
+      line-height:1.3;
+      text-shadow:0 10px 30px rgba(0,0,0,1);
+    }
+    .hero-face-back{
+      transform:rotateY(180deg);
+      background:var(--deep-blue);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:30px;
+      border:2px solid rgba(255,255,255,0.1);
+      border-radius:2.5rem;
+      z-index:1;
+    }
+    .hero-back-float{
+      transform:translateZ(60px);
+      transform-style:preserve-3d;
+    }
     .step-img{width:80px;height:80px;object-fit:cover;border-radius:1rem;}
 
     .file-input-label{
@@ -292,15 +374,37 @@
       <!-- SCREEN: LANDING -->
       <div id="screen-landing" class="app-screen p-6 space-y-10">
         <div class="space-y-4 pt-4">
-          <div class="hero-img-container">
-            <img id="landing-hero-image" class="hero-slide-img" src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=800" alt="Traveler safety">
-            <div class="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent"></div>
-            <div class="absolute bottom-4 left-6 right-6">
-              <p id="landing-hero-badge" class="text-white text-sm font-bold uppercase tracking-widest drop-shadow-md">Verified Secure Logging</p>
+          <div class="hero-flip-container" id="landing-hero-main">
+            <div class="hero-flip-inner" id="landing-hero-inner">
+              <div class="hero-face hero-face-front">
+                <img id="landing-hero-image" class="hero-bg-img" src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=800" alt="Traveler safety">
+                <div class="absolute inset-0 bg-gradient-to-t from-blue-900/70 to-transparent rounded-[2.5rem]"></div>
+                <div class="hero-floating-content">
+                  <p id="landing-hero-badge" class="hero-case-tag">CRITICAL CASE FILE</p>
+                  <p id="landing-hero-story" class="hero-story">Hindy Umoren went for an interview. She never came back.</p>
+                </div>
+              </div>
+
+              <div class="hero-face hero-face-back">
+                <img src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&q=80&w=1200" class="hero-bg-img opacity-60" alt="Caution background">
+                <div class="absolute inset-0 bg-blue-950/85 rounded-[2.5rem]"></div>
+                <div class="hero-back-float">
+                  <i class="ph-bold ph-warning-circle text-rose-500 text-6xl mb-4"></i>
+                  <h2 class="text-white font-black text-2xl uppercase mb-2">Don't Be Next</h2>
+                  <p class="text-blue-200 text-sm leading-relaxed mb-6">
+                    Criminals use fake dates, jobs, and business deals to lure victims.
+                    Meetily ensures your trail is logged and monitored.
+                  </p>
+                  <div class="inline-block px-4 py-2 border border-white/20 rounded-full text-[10px] text-white font-bold tracking-widest uppercase shadow-lg">
+                    Logging Saves Lives
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <h1 id="landing-hero-headline" class="text-4xl font-extrabold leading-tight text-blue-900">Meetily Log Meetups.</h1>
           <p id="landing-hero-subtext" class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? logging it gives you a 48-hour safety net.</p>
+          <p class="text-xs text-slate-500 leading-relaxed">If you don't check-in after 48hrs, your FPC and authorities are notified immediately.</p>
           <div class="flex flex-col gap-3">
             <button id="btn-landing-signup" class="w-full btn-primary font-bold py-5 rounded-2xl shadow-xl">
               Sign Up
@@ -427,8 +531,13 @@
           <div id="testimonial-dots" class="flex items-center justify-center gap-2"></div>
         </div>
 
-        <div class="pb-12 text-center">
+        <div class="pb-12 text-center space-y-2">
           <p class="text-slate-400 text-[10px] uppercase font-black tracking-[0.3em]">Guardian Angel App v2.0</p>
+          <p class="text-[11px] text-slate-500">
+            <a href="#" data-legal-open="terms" class="font-semibold text-blue-700 underline">Terms & Conditions</a>
+            <span class="mx-2 text-slate-300">|</span>
+            <a href="#" data-legal-open="privacy" class="font-semibold text-blue-700 underline">Privacy Statement</a>
+          </p>
         </div>
       </div>
 
@@ -451,6 +560,11 @@
                  placeholder="4-Digit PIN"
                  oninput="this.value=this.value.replace(/\\D/g,'')"
                  required class="form-input text-center text-2xl tracking-[0.5em]">
+          <label id="auth-legal-wrap" for="auth-legal-agree" class="flex items-start gap-3 text-xs text-slate-600 leading-relaxed">
+            <input id="auth-legal-agree" type="checkbox" class="mt-0.5 w-4 h-4 rounded border border-slate-300 text-blue-700 focus:ring-blue-500">
+            <span>I agree to the <a href="#" data-legal-open="terms" class="font-bold text-blue-700 underline">Terms & Conditions</a> and <a href="#" data-legal-open="privacy" class="font-bold text-blue-700 underline">Privacy Statement</a>.</span>
+          </label>
+          <p id="auth-legal-error" class="field-error hidden">Please accept Terms & Privacy to continue.</p>
 
           <button id="auth-submit-btn" type="submit" class="w-full btn-primary font-bold py-4 rounded-2xl shadow-lg mt-4">Create Account</button>
         </form>
@@ -813,6 +927,75 @@
         </div>
       </div>
 
+      <!-- MODAL: TERMS -->
+      <div id="modal-terms" class="hidden fixed inset-0 bg-slate-900/55 backdrop-blur-md z-[120] p-4">
+        <div class="max-w-md mx-auto h-full flex items-center">
+          <div class="w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-black text-blue-900 uppercase tracking-wider">MEETILY Terms & Conditions</h3>
+              <button type="button" data-legal-close class="text-slate-500 font-black text-xs uppercase">Close</button>
+            </div>
+            <div class="p-5 max-h-[75vh] overflow-y-auto text-sm text-slate-700 space-y-4 leading-relaxed">
+              <p><strong>Effective Date:</strong> 20/02/2026<br><strong>Company:</strong> Amada Technologies LTD (RC: 7569270) ("Amada", "we", "us")<br><strong>Product:</strong> MEETILY ("Meetily", the "Service", the "App")<br><strong>Country Focus:</strong> Nigeria (with global availability where lawful)</p>
+              <p><strong>1) Acceptance of Terms</strong><br>By accessing or using MEETILY, you confirm that you have read and agree to these Terms, and will comply with all applicable laws and regulations. If you do not agree, do not use the Service.</p>
+              <p><strong>2) Eligibility (Age & Capacity)</strong><br>You must be 18 years or older to use MEETILY. If you are under 18, you may only use the Service with verifiable parental/guardian consent and under their supervision, where allowed by law.</p>
+              <p><strong>3) What MEETILY Is (and Is Not)</strong><br>MEETILY helps users log meetup details (e.g., identity, location, optional images/GPS) and run a time-based safety workflow that may include notifying your chosen emergency contact ("FPC") and potentially escalating to authorities if you fail to check in.</p>
+              <p>MEETILY DOES NOT guarantee your safety, prevent crime, ensure rescue, provide emergency dispatch services, or replace law enforcement, medical services, or private security. Any safety watch is a best-effort digital workflow, not a promise of outcome.</p>
+              <p><strong>4) User Responsibilities (Critical)</strong><br>You agree to provide accurate information, keep your phone number/device/PIN secure, check in and end sessions promptly, and contact emergency services directly when in immediate danger. You are solely responsible for your decisions, meetups, destinations, and interactions.</p>
+              <p><strong>5) Emergency Contacts ("FPC") & Consent</strong><br>You agree that you have notified your FPC and obtained consent to be contacted by MEETILY, will not list someone who has not consented, and are responsible for accurate contact details. You authorize MEETILY to contact your FPC based on your preferences and activity status.</p>
+              <p><strong>6) Escalation & Authority Notifications</strong><br>If you do not verify/close your safety watch within the configured timeframe (e.g., 48 hours), MEETILY may notify your FPC and/or generate/transmit a report or alert packet to relevant authorities or third parties, subject to operational availability and local law. Authorities may not respond, may respond late, or may require further verification.</p>
+              <p><strong>7) Packages, Paid Features & Payment Rules</strong><br>MEETILY may offer tiered packages (e.g., Basic, Standard, Confidence Plus) with different feature access. Fees (including bank transfer-based payments) may be required. Verification may be automated or manual, and access may be delayed if payment cannot be verified. You may not reverse payments after consuming paid features, except where required by law.</p>
+              <p><strong>8) Refunds</strong><br>Unless required by law, payments are non-refundable once a paid feature is unlocked or a paid-tier session starts. Any refund we choose to issue is at our sole discretion and may require identity verification.</p>
+              <p><strong>9) Location, GPS & Media Upload Consent</strong><br>If you enable GPS, upload images, or provide identifying details about others ("Strangers"), you confirm you have lawful authority to share such information. Do not upload illegal content, intimate images without consent, privacy-violating content, threats, harassment, or false accusations.</p>
+              <p><strong>10) Biometric / Face Verification (If Enabled)</strong><br>MEETILY may use camera-based verification ("liveness", face capture) to reduce abuse and confirm legitimate session closure. You consent to camera access where enabled; some security features may be unavailable otherwise.</p>
+              <p><strong>11) Data Deletion Claims & Exceptions</strong><br>Even where deletion behavior is offered, some data may persist in backups, logs, fraud-prevention systems, or legal archives for limited periods. We may retain/disclose data where required by law, to enforce Terms, prevent harm, or respond to lawful requests.</p>
+              <p><strong>12) Prohibited Use</strong><br>You may not use MEETILY to stalk, dox, harass, intimidate, blackmail, fabricate logs for defamation/extortion, upload unauthorized data, reverse engineer, or interfere with security/availability.</p>
+              <p><strong>13) Intellectual Property</strong><br>All MEETILY branding, UI, code, workflows, and content (except user-provided content) are owned by Amada or licensors. You receive a limited, revocable, non-transferable license to use the Service.</p>
+              <p><strong>14) User Content License</strong><br>You retain ownership of your content, and grant Amada a limited license to host, process, and transmit content to provide the Service and generate safety alerts/reports based on your inputs.</p>
+              <p><strong>15) Service Availability & Changes</strong><br>MEETILY may be modified, suspended, or discontinued at any time. Features may change without notice. We are not liable for downtime, failed notifications, telecom delays, or third-party outages.</p>
+              <p><strong>16) Third-Party Services</strong><br>MEETILY may rely on third-party infrastructure (hosting, maps, messaging, payment verification). We are not responsible for failures caused by third parties, banks, or telecom networks.</p>
+              <p><strong>17) Disclaimer of Warranties</strong><br>MEETILY is provided "AS IS" and "AS AVAILABLE." To the maximum extent permitted by law, Amada disclaims all warranties, including fitness for a particular purpose, non-infringement, and uninterrupted operation.</p>
+              <p><strong>18) Limitation of Liability (Very Important)</strong><br>To the maximum extent permitted by law, Amada is not liable for indirect, incidental, special, consequential, punitive, or exemplary damages. Total liability is limited to the amount paid in the last 3 months for the Service (or N5,000 if you paid nothing), whichever is lower.</p>
+              <p><strong>19) Indemnity</strong><br>You agree to indemnify and hold harmless Amada, its directors, employees, contractors, and affiliates from claims arising from your content, misuse, breach of Terms, or violation of law/third-party rights.</p>
+              <p><strong>20) Termination</strong><br>We may suspend or terminate your account at any time if we believe you violated these Terms, created risk, or abused the Service. You may stop using MEETILY anytime.</p>
+              <p><strong>21) Disputes, Governing Law & Venue</strong><br>These Terms are governed by the laws of the Federal Republic of Nigeria. Disputes shall be resolved in the courts of [Insert State: e.g., Abuja FCT or Lagos], unless we elect arbitration. Optional arbitration may proceed before a single arbitrator seated in [Insert city], Nigeria.</p>
+              <p><strong>22) Notices & Contact</strong><br>Support / Legal Contact: [Insert email]<br>Address: [Insert business address]</p>
+              <p><strong>23) Updates to These Terms</strong><br>We may update these Terms. Continued use after updates means you accept the revised Terms.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: PRIVACY -->
+      <div id="modal-privacy" class="hidden fixed inset-0 bg-slate-900/55 backdrop-blur-md z-[120] p-4">
+        <div class="max-w-md mx-auto h-full flex items-center">
+          <div class="w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-black text-blue-900 uppercase tracking-wider">MEETILY Privacy Statement</h3>
+              <button type="button" data-legal-close class="text-slate-500 font-black text-xs uppercase">Close</button>
+            </div>
+            <div class="p-5 max-h-[75vh] overflow-y-auto text-sm text-slate-700 space-y-4 leading-relaxed">
+              <p><strong>Effective Date:</strong> [Insert date]<br>This Privacy Statement explains how Amada Technologies LTD (RC: 7569270) collects, uses, stores, shares, and protects personal data in MEETILY.</p>
+              <p><strong>1) Data We Collect</strong><br><strong>A) Account & Profile Data:</strong> Full name (optional by signup flow), phone number, PIN (stored securely/hashed where possible), emergency contact/FPC details (name, phone, relationship, priority settings).</p>
+              <p><strong>B) Meetup Log Data (User-Entered):</strong> Stranger details (names/phones/notes), meetup address/state/LGA/place type, session timestamps/status, package selected (Basic/Standard/Confidence Plus).</p>
+              <p><strong>C) Location Data (If Enabled):</strong> GPS coordinates during active sessions.</p>
+              <p><strong>D) Images & Media (If Uploaded):</strong> Stranger image, supporting images, optional pre-log face capture/end-meetup verification.</p>
+              <p><strong>E) Device & Technical Data:</strong> Basic device identifiers, browser/app telemetry, IP address, timestamps, diagnostics, and fraud signals where available.</p>
+              <p><strong>2) How We Use Data</strong><br>We use data to create/manage accounts, run safety-watch workflows (including check-in monitoring), notify your FPC and prepare escalation reports where necessary, verify payments/unlock features, prevent fraud/abuse, and comply with legal obligations.</p>
+              <p><strong>3) Legal Bases (Where Applicable)</strong><br>Consent (e.g., GPS/camera/media), contract performance (service delivery), legitimate interests (fraud prevention/safety workflows), and legal obligations.</p>
+              <p><strong>4) How We Share Data</strong><br><strong>A)</strong> Your FPC/emergency contact where alerts are triggered.<br><strong>B)</strong> Authorities/responders where there is missed check-in or reasonable risk of harm, subject to law/feasibility.<br><strong>C)</strong> Service providers for hosting, storage, analytics, messaging, payment verification.<br><strong>D)</strong> Legal/safety disclosures to comply with law, enforce Terms, prevent harm, and protect users/public.</p>
+              <p><strong>5) Data Retention</strong><br>Data is retained as needed for service delivery, safety workflows, fraud prevention, and legal compliance. Even when deletion is offered after meetup end, some data may remain temporarily in backups, audit logs, or compliance archives, and longer where legally required or needed to prevent harm.</p>
+              <p><strong>6) Your Choices & Controls</strong><br>You may edit profile/FPC details, end sessions and request deletion of associated logs, disable GPS/camera at device level (which may limit features), and request access/correction/deletion via support.</p>
+              <p><strong>7) Biometrics / Face Data (If Used)</strong><br>If camera verification is enabled, MEETILY may process face images for liveness/verification. We do not sell biometric data; it is used only for security, anti-fraud, and session integrity.</p>
+              <p><strong>8) Security Measures</strong><br>We use reasonable administrative, technical, and organizational safeguards, including access controls, encryption in transit where supported, secure storage practices, and abuse monitoring. No system is perfectly secure.</p>
+              <p><strong>9) Children's Privacy</strong><br>MEETILY is not intended for children under 18 without parental/guardian consent and supervision. If we learn data was collected from a child without appropriate consent, we may delete it.</p>
+              <p><strong>10) International Transfers</strong><br>If data is processed outside Nigeria (e.g., cloud infrastructure), we take reasonable contractual and technical safeguards where applicable.</p>
+              <p><strong>11) Changes to This Privacy Statement</strong><br>We may update this Privacy Statement. Continued use after updates means you accept the revised statement.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- FIXED BOTTOM NAV -->
       <nav id="app-nav" class="hidden h-20 bg-white border-t border-blue-50 fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex items-center justify-around px-8 z-[80]">
         <button type="button" data-screen="screen-home" class="nav-btn-el active nav-item flex flex-col items-center gap-1">
@@ -1006,6 +1189,7 @@
       let toastVisibleTimeout = null;
       let landingHeroIndex = Math.floor(Math.random() * LANDING_HERO_BADGES.length);
       let landingHeroInterval = null;
+      let landingHeroFlipBusy = false;
       let testimonialIndex = Math.floor(Math.random() * TESTIMONIALS.length);
       let testimonialInterval = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
@@ -1157,11 +1341,15 @@
         const title = document.getElementById('auth-title');
         const subtitle = document.getElementById('auth-subtitle');
         const signup = document.getElementById('signup-fields');
+        const legalWrap = document.getElementById('auth-legal-wrap');
+        const legalError = document.getElementById('auth-legal-error');
         const toggle = document.getElementById('btn-toggle-auth');
         const submitBtn = document.getElementById('auth-submit-btn');
         title.innerText = isSignup ? 'Sign Up' : 'Welcome Back';
         subtitle.innerText = isSignup ? 'Enter your details to proceed.' : 'Sign in with your phone and PIN.';
         signup.style.display = isSignup ? 'block' : 'none';
+        if (legalWrap) legalWrap.style.display = isSignup ? 'flex' : 'none';
+        if (legalError) legalError.classList.add('hidden');
         toggle.innerText = isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
         submitBtn.dataset.defaultLabel = isSignup ? 'Create Account' : 'Sign In';
         submitBtn.innerText = submitBtn.dataset.defaultLabel;
@@ -1209,6 +1397,17 @@
 
       function closePaymentModal() {
         document.getElementById('modal-payment').classList.add('hidden');
+      }
+
+      function closeLegalModals() {
+        document.getElementById('modal-terms')?.classList.add('hidden');
+        document.getElementById('modal-privacy')?.classList.add('hidden');
+      }
+
+      function openLegalModal(kind) {
+        closeLegalModals();
+        if (kind === 'terms') document.getElementById('modal-terms')?.classList.remove('hidden');
+        if (kind === 'privacy') document.getElementById('modal-privacy')?.classList.remove('hidden');
       }
 
       function packageCovers(currentPackage, requiredPackage) {
@@ -1611,6 +1810,8 @@
         const name = document.getElementById('auth-name');
         const phone = document.getElementById('auth-phone');
         const pin = document.getElementById('auth-pin');
+        const legalAgree = document.getElementById('auth-legal-agree');
+        const legalError = document.getElementById('auth-legal-error');
         if (isSignup) valid = validateRequired(name, "Full name is required") && valid;
         valid = validatePhoneIfPresent(phone, true) && valid;
         removeFieldError(pin);
@@ -1618,6 +1819,15 @@
         if (!pin.value || pin.value.length !== 4) {
           setFieldError(pin, "PIN must be 4 digits");
           valid = false;
+        }
+        if (isSignup) {
+          if (legalError) legalError.classList.add('hidden');
+          if (legalAgree && !legalAgree.checked) {
+            if (legalError) legalError.classList.remove('hidden');
+            valid = false;
+          }
+        } else {
+          if (legalError) legalError.classList.add('hidden');
         }
         return valid;
       }
@@ -1723,27 +1933,49 @@
 
       function updateLandingHero(nextIndex) {
         const image = document.getElementById('landing-hero-image');
-        const badge = document.getElementById('landing-hero-badge');
+        const story = document.getElementById('landing-hero-story');
         const headline = document.getElementById('landing-hero-headline');
         const subtext = document.getElementById('landing-hero-subtext');
-        if (!image || !badge || !headline || !subtext) return;
+        const inner = document.getElementById('landing-hero-inner');
+        if (!image || !story || !headline || !subtext || !inner || landingHeroFlipBusy) return;
+        const REAR_HOLD_MS = 5000;
+        landingHeroFlipBusy = true;
         landingHeroIndex = nextIndex % LANDING_HERO_BADGES.length;
         const imageIndex = landingHeroIndex % LANDING_HERO_IMAGES.length;
-        image.classList.add('is-changing');
+        inner.classList.add('flipped');
         setTimeout(() => {
           image.src = LANDING_HERO_IMAGES[imageIndex];
-          badge.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
+          story.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
           headline.innerText = LANDING_HERO_HEADLINES[0];
-          image.classList.remove('is-changing');
-        }, 220);
+          setTimeout(() => {
+            inner.classList.remove('flipped');
+            setTimeout(() => { landingHeroFlipBusy = false; }, 380);
+          }, REAR_HOLD_MS);
+        }, 720);
       }
 
       function startLandingHeroRotation() {
-        if (landingHeroInterval) clearInterval(landingHeroInterval);
-        updateLandingHero(landingHeroIndex);
-        landingHeroInterval = setInterval(() => {
+        const FRONT_HOLD_MS = 6500;
+        if (landingHeroInterval) clearTimeout(landingHeroInterval);
+        const image = document.getElementById('landing-hero-image');
+        const story = document.getElementById('landing-hero-story');
+        const headline = document.getElementById('landing-hero-headline');
+        if (image && story && headline) {
+          const imageIndex = landingHeroIndex % LANDING_HERO_IMAGES.length;
+          image.src = LANDING_HERO_IMAGES[imageIndex];
+          story.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
+          headline.innerText = LANDING_HERO_HEADLINES[0];
+        }
+        const queueNextFlip = () => {
+          landingHeroInterval = setTimeout(() => {
+            updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_BADGES.length);
+            queueNextFlip();
+          }, FRONT_HOLD_MS + 5000 + 2000);
+        };
+        landingHeroInterval = setTimeout(() => {
           updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_BADGES.length);
-        }, 4000);
+          queueNextFlip();
+        }, FRONT_HOLD_MS);
       }
 
       function updateTestimonial(nextIndex) {
@@ -2745,6 +2977,25 @@
       document.getElementById('btn-landing-signup').onclick = () => openAuth('signup');
       document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
       document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
+      document.getElementById('auth-legal-agree').onchange = (e) => {
+        const legalError = document.getElementById('auth-legal-error');
+        if (e.target.checked && legalError) legalError.classList.add('hidden');
+      };
+      document.querySelectorAll('[data-legal-open]').forEach((el) => {
+        el.onclick = (e) => {
+          e.preventDefault();
+          openLegalModal(el.dataset.legalOpen || '');
+        };
+      });
+      document.querySelectorAll('[data-legal-close]').forEach((el) => {
+        el.onclick = () => closeLegalModals();
+      });
+      document.getElementById('modal-terms')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modal-terms') closeLegalModals();
+      });
+      document.getElementById('modal-privacy')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modal-privacy') closeLegalModals();
+      });
 
       // Bottom nav
       document.querySelectorAll('[data-screen]').forEach(btn => {
