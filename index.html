@@ -1033,24 +1033,24 @@
       </div>
 
       <!-- MODAL: UPGRADE -->
-      <div id="modal-upgrade" class="hidden fixed inset-0 bg-blue-900/40 backdrop-blur-md z-[110] flex items-center justify-center p-6">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 space-y-8 shadow-2xl">
-          <div class="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto text-blue-600 shadow-inner">
-            <i class="ph-bold ph-lightning text-5xl"></i>
-          </div>
-          <div class="text-center space-y-2">
-            <h2 class="text-2xl font-black text-blue-900">Upgrade Required</h2>
-            <p id="upgrade-desc" class="text-sm text-slate-500 italic">This feature is premium only.</p>
-          </div>
+      <div id="modal-upgrade" class="hidden fixed inset-0 bg-blue-900/40 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-sm max-h-[88vh] shadow-2xl overflow-hidden flex flex-col">
+          <div class="p-6 sm:p-8 overflow-y-auto space-y-6">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto text-blue-600 shadow-inner">
+              <i class="ph-bold ph-lightning text-4xl sm:text-5xl"></i>
+            </div>
+            <div class="text-center space-y-2">
+              <h2 class="text-xl sm:text-2xl font-black text-blue-900">Upgrade Required</h2>
+              <p id="upgrade-desc" class="text-xs sm:text-sm text-slate-500 italic">This feature is premium only.</p>
+            </div>
 
-          <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100">
-            <p class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-3">Transfer to Upgrade</p>
-            <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Meetily</span></p>
-            <p class="text-xs font-bold text-blue-900 mt-1">Bank: <span class="font-black">Stanbic IBTC</span></p>
-            <p class="text-2xl font-black text-blue-600 mt-2">5770901212</p>
-          </div>
+            <div class="bg-blue-50 p-5 sm:p-6 rounded-3xl border border-blue-100">
+              <p class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-3">Transfer to Upgrade</p>
+              <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Meetily</span></p>
+              <p class="text-xs font-bold text-blue-900 mt-1">Bank: <span class="font-black">Stanbic IBTC</span></p>
+              <p class="text-2xl font-black text-blue-600 mt-2">5770901212</p>
+            </div>
 
-          <div class="grid gap-3">
             <div class="rounded-2xl border border-blue-100 p-4 bg-white">
               <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Packages</p>
               <ul class="mt-2 text-xs text-slate-600 space-y-1">
@@ -1059,31 +1059,36 @@
                 <li><span class="font-black text-blue-900">Confidence Plus (₦2,500):</span> Basic + GPS + Pictures</li>
               </ul>
             </div>
-
-            <div class="flex gap-4">
-              <button type="button" id="btn-upgrade-later" class="flex-1 text-slate-400 font-bold py-3 text-xs uppercase tracking-widest">Later</button>
-              <button type="button" id="btn-upgrade-paid" class="flex-1 btn-primary py-4 rounded-2xl font-black text-xs uppercase tracking-widest">I've Paid</button>
+          </div>
+          <div class="p-4 sm:p-5 border-t border-slate-100 bg-white">
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" id="btn-upgrade-later" class="text-slate-400 font-bold py-3 text-xs uppercase tracking-widest rounded-xl bg-slate-50">Later</button>
+              <button type="button" id="btn-upgrade-paid" class="btn-primary py-3 rounded-xl font-black text-xs uppercase tracking-widest">I've Paid</button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- MODAL: PAYMENT WAIT -->
-      <div id="modal-payment" class="hidden fixed inset-0 bg-blue-900/50 backdrop-blur-md z-[114] flex items-center justify-center p-6">
-        <div class="bg-white rounded-[2.3rem] w-full max-w-sm p-8 space-y-6 shadow-2xl">
-          <div class="text-center space-y-2">
-            <h2 class="text-2xl font-black text-blue-900">Complete Payment</h2>
-            <p class="text-sm text-slate-500">Transfer to this virtual account. Logging unlocks automatically once paid.</p>
-          </div>
-          <div class="bg-blue-50 border border-blue-100 rounded-3xl p-5 text-center space-y-2">
-            <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest">Virtual Account Number</p>
-            <p id="payment-account-number" class="text-3xl text-blue-700 font-black tracking-wide">-</p>
-          </div>
+      <div id="modal-payment" class="hidden fixed inset-0 bg-blue-900/50 backdrop-blur-md z-[114] flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-[2.3rem] w-full max-w-sm max-h-[88vh] shadow-2xl overflow-hidden flex flex-col">
+          <div class="p-6 sm:p-8 overflow-y-auto space-y-6">
+            <div class="text-center space-y-2">
+              <h2 class="text-xl sm:text-2xl font-black text-blue-900">Complete Payment</h2>
+              <p class="text-xs sm:text-sm text-slate-500">Transfer to this virtual account. Logging unlocks automatically once paid.</p>
+            </div>
+            <div class="bg-blue-50 border border-blue-100 rounded-3xl p-5 text-center space-y-2">
+              <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest">Virtual Account Number</p>
+              <p id="payment-account-number" class="text-3xl text-blue-700 font-black tracking-wide">-</p>
+            </div>
             <p id="payment-status-text" class="text-xs text-slate-500 text-center font-bold uppercase tracking-widest">Waiting for payment confirmation...</p>
             <p id="payment-required-package" class="text-[10px] text-blue-500 text-center font-black uppercase tracking-widest">Required plan: -</p>
-          <div class="grid grid-cols-2 gap-3">
-            <button type="button" id="btn-payment-refresh" class="btn-primary py-3 rounded-xl font-black uppercase tracking-widest text-xs">Check Now</button>
-            <button type="button" id="btn-payment-close" class="text-slate-400 font-bold py-3 text-xs uppercase tracking-widest">Close</button>
+          </div>
+          <div class="p-4 sm:p-5 border-t border-slate-100 bg-white">
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" id="btn-payment-refresh" class="btn-primary py-3 rounded-xl font-black uppercase tracking-widest text-xs">Check Now</button>
+              <button type="button" id="btn-payment-close" class="text-slate-400 font-bold py-3 text-xs uppercase tracking-widest rounded-xl bg-slate-50">Close</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1704,6 +1709,7 @@
         document.getElementById('no-active-meetup').classList.remove('hidden');
         document.getElementById('meetup-update-input').value = "";
         document.getElementById('auth-form').reset();
+        setProfileFormFromUser({});
         updateProfileUserDetails();
         refreshPaymentUi();
         renderMeetupDetails();
@@ -1842,10 +1848,26 @@
           data
         }).catch(() => null);
         if (byKey && extractNumber(byKey.updated) > 0) return byKey;
-        return sendToBackend({
+        const byExact = await sendToBackend({
           action: "update",
           sheet: "Users",
           filters: { phone },
+          data
+        }).catch(() => null);
+        if (byExact && extractNumber(byExact.updated) > 0) return byExact;
+
+        // Final fallback for older rows where phone_key/phone format may not align.
+        const readAll = await sendToBackend({
+          action: "read",
+          sheet: "Users"
+        }).catch(() => ({ status: "error", data: [] }));
+        const rows = extractRows(readAll);
+        const matched = rows.find((u) => phoneKey(u?.phone) === key);
+        if (!matched?.id) return byExact || byKey || { status: "error", updated: 0 };
+        return sendToBackend({
+          action: "update",
+          sheet: "Users",
+          filters: { id: matched.id },
           data
         });
       }
@@ -2751,6 +2773,28 @@
         document.getElementById('header-user-name').innerText = signedInUser.name ? signedInUser.name : "";
       }
 
+      function setProfileFormFromUser(user = {}) {
+        const fpcName = String(user.auth_name || user.fpc_name || "").trim();
+        const fpcPhone = normalizeLocalPhone(user.auth_phone || user.fpc_phone || "");
+        const fpcRelation = String(user.auth_relation || user.fpc_relation || "").trim();
+        let fpcPriority = String(user.auth_priority || user.fpc_priority || "").trim();
+        if (fpcPriority === "Person first, then Police") fpcPriority = "person_then_police";
+        if (fpcPriority === "Police first, then Person") fpcPriority = "police_then_person";
+
+        document.getElementById('fpc-name').value = fpcName;
+        document.getElementById('fpc-phone').value = fpcPhone;
+        document.getElementById('fpc-relation').value = fpcRelation;
+        document.getElementById('fpc-priority').value = fpcPriority;
+
+        const priorityEl = document.getElementById('fpc-priority');
+        const selectedText = priorityEl.value
+          ? priorityEl.options[priorityEl.selectedIndex]?.text || priorityEl.value
+          : "";
+        document.getElementById('fpc-summary').innerText = fpcName
+          ? `${fpcName} (${fpcRelation || "Unknown"}) • ${fpcPhone || "-"} • ${selectedText || "No priority"}`
+          : "No emergency contact saved yet.";
+      }
+
       function distance(a, b) {
         return Math.hypot((a.x || 0) - (b.x || 0), (a.y || 0) - (b.y || 0));
       }
@@ -3294,6 +3338,7 @@
               virtualAccountNumber: signupUser?.virtualAccountNumber || paymentState.virtualAccountNumber || "",
               paidTotal: paymentState.paidTotal
             };
+            setProfileFormFromUser({});
             unlockedPackage = signedInUser.package || "Basic";
             try {
               await createUserInDb({
@@ -3329,6 +3374,7 @@
               virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || "",
               paidTotal: extractNumber(foundUser.paid_total || foundUser.paidTotal)
             };
+            setProfileFormFromUser(foundUser);
             unlockedPackage = signedInUser.package || "Basic";
             checkPaymentStatus(phoneInput, pinInput)
               .then((statusResp) => {
@@ -3369,19 +3415,32 @@
       document.getElementById('profile-form').onsubmit = async (e) => {
         e.preventDefault();
         if (!validateProfileForm()) return;
+        const fpcName = document.getElementById('fpc-name').value.trim();
+        const fpcPhone = normalizePhone(document.getElementById('fpc-phone').value);
+        const fpcRelation = document.getElementById('fpc-relation').value.trim();
         const priorityEl = document.getElementById('fpc-priority');
+        const fpcPriority = priorityEl.value;
         const priorityText = priorityEl.options[priorityEl.selectedIndex].text;
         document.getElementById('fpc-summary').innerText =
-          `${document.getElementById('fpc-name').value} (${document.getElementById('fpc-relation').value}) • ${document.getElementById('fpc-phone').value} • ${priorityText}`;
+          `${fpcName} (${fpcRelation}) • ${fpcPhone} • ${priorityText}`;
         try {
-          await sendToBackend({
-            action: "update",
-            sheet: "Users",
-            filters: { phone: signedInUser.phone },
-            data: extractDynamicFormData(document.getElementById('profile-form'))
+          await updateUserInDb(signedInUser.phone, {
+            phone_key: phoneKey(signedInUser.phone),
+            auth_name: fpcName,
+            auth_phone: fpcPhone,
+            auth_relation: fpcRelation,
+            auth_priority: fpcPriority,
+            auth_priority_text: priorityText,
+            fpc_name: fpcName,
+            fpc_phone: fpcPhone,
+            fpc_relation: fpcRelation,
+            fpc_priority: fpcPriority,
+            updated_at: new Date().toISOString()
           });
         } catch (err) {
           console.error("Profile update failed:", err);
+          alert("Could not save FPC profile. Please try again.");
+          return;
         }
         alert("Profile saved.");
       };
@@ -3532,6 +3591,7 @@
       // Startup
       loadNigeriaData();
       updateProfileUserDetails();
+      setProfileFormFromUser({});
       refreshPaymentUi();
       startLandingHeroRotation();
       startTestimonialsRotation();
