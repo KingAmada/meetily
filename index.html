@@ -444,6 +444,75 @@
       transform:translateZ(60px);
       transform-style:preserve-3d;
     }
+
+    @media (max-width: 640px){
+      .max-w-md{
+        max-width:100vw;
+      }
+    }
+
+    @media (max-width: 480px){
+      html{font-size:14px;}
+      :root{
+        --header-h:56px;
+        --nav-h:72px;
+      }
+      header{
+        height:56px !important;
+        padding-left:14px !important;
+        padding-right:14px !important;
+      }
+      .app-screen{
+        height:calc(100vh - var(--header-h) - var(--nav-h));
+        padding-bottom:14px;
+      }
+      #screen-landing,
+      #screen-home,
+      #screen-auth,
+      #screen-log-form,
+      #screen-active,
+      #screen-profile{
+        padding:14px !important;
+      }
+      #screen-landing{
+        gap:1rem !important;
+      }
+      #landing-hero-headline{font-size:2rem;line-height:1.1;}
+      #landing-hero-subtext{font-size:1.05rem;line-height:1.4;}
+      .hero-flip-container{height:190px;margin-bottom:.8rem;}
+      .hero-face,
+      .hero-face-back,
+      .hero-bg-img{border-radius:1.5rem;}
+      .hero-floating-content{padding:16px;}
+      .hero-case-tag{
+        font-size:9px;
+        padding:4px 10px;
+        margin-bottom:8px;
+        transform:translateZ(90px);
+      }
+      .hero-story{
+        font-size:.92rem;
+        transform:translateZ(62px);
+      }
+      .hero-face-back{padding:14px;}
+      .form-input{
+        font-size:14px;
+        padding:.9rem;
+        border-radius:1rem;
+      }
+      .stat-card{border-radius:1.1rem;}
+      .step-img{width:64px;height:64px;}
+      #app-nav{
+        height:72px !important;
+        padding-left:14px !important;
+        padding-right:14px !important;
+      }
+      #nav-log > div{
+        width:48px;
+        height:48px;
+        margin-top:-26px;
+      }
+    }
     .step-img{width:80px;height:80px;object-fit:cover;border-radius:1rem;}
 
     .file-input-label{
