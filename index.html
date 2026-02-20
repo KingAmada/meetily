@@ -1048,7 +1048,7 @@
               <p class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-3">Transfer to Upgrade</p>
               <p class="text-xs font-bold text-blue-900">Name: <span class="font-black">Meetily</span></p>
               <p class="text-xs font-bold text-blue-900 mt-1">Bank: <span class="font-black">Stanbic IBTC</span></p>
-              <p class="text-2xl font-black text-blue-600 mt-2">5770901212</p>
+              <p id="upgrade-account-number" class="text-2xl font-black text-blue-600 mt-2">-</p>
             </div>
 
             <div class="rounded-2xl border border-blue-100 p-4 bg-white">
@@ -1372,7 +1372,7 @@
       let polygonSeries = null;
       let dotSeries = null;
       let stateGeometryPool = [];
-      let signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
+      let signedInUser = { name: "", phone: "", pin: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
       let livenessStepIndex = 0;
       let livenessAutoTimer = null;
       let faceModelsLoaded = false;
@@ -1630,11 +1630,34 @@
         document.getElementById('modal-payment').classList.remove('hidden');
       }
 
+      async function ensureVirtualAccountNumber() {
+        const existing = String(signedInUser.virtualAccountNumber || "").trim();
+        if (existing && /\d{10,}/.test(existing)) return existing;
+        try {
+          const resp = await checkPaymentStatus(signedInUser.phone || "", signedInUser.pin || "");
+          const normalized = normalizePaymentStatus(resp, signedInUser.package || "Basic");
+          if (normalized.virtualAccountNumber) {
+            signedInUser.virtualAccountNumber = normalized.virtualAccountNumber;
+            try {
+              await updateUserInDb(signedInUser.phone, {
+                phone_key: phoneKey(signedInUser.phone),
+                virtual_account_number: signedInUser.virtualAccountNumber
+              });
+            } catch (_) {
+              // non-blocking
+            }
+          }
+        } catch (_) {
+          // keep fallback value
+        }
+        return String(signedInUser.virtualAccountNumber || "").trim();
+      }
+
       async function verifyPaymentNow() {
         const statusEl = document.getElementById('payment-status-text');
         try {
           statusEl.innerText = "Checking payment status...";
-          const resp = await checkPaymentStatus(signedInUser.phone || "", "");
+          const resp = await checkPaymentStatus(signedInUser.phone || "", signedInUser.pin || "");
           const normalized = normalizePaymentStatus(resp, signedInUser.package || "Basic");
           signedInUser.isPaid = normalized.isPaid;
           signedInUser.package = normalized.package;
@@ -1702,7 +1725,7 @@
         preLogImageDataUrl = "";
         requiredPaymentPackage = null;
         unlockedPackage = "Basic";
-        signedInUser = { name: "", phone: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
+        signedInUser = { name: "", phone: "", pin: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
         document.getElementById('app-nav').classList.add('hidden');
         document.getElementById('user-info-reveal').classList.add('hidden');
         document.getElementById('active-meetup-card-home').classList.add('hidden');
@@ -2550,7 +2573,11 @@
         pendingUpgradeTarget = requiredPkg;
         document.getElementById('upgrade-desc').innerHTML =
           `The <span class="font-black text-blue-600">${requiredPkg}</span> Package is required for <span class="font-black">${feature}</span>.`;
+        document.getElementById('upgrade-account-number').innerText = signedInUser.virtualAccountNumber || "Fetching...";
         document.getElementById('modal-upgrade').classList.remove('hidden');
+        ensureVirtualAccountNumber().then((accountNo) => {
+          document.getElementById('upgrade-account-number').innerText = accountNo || "Unavailable";
+        });
       }
 
       function closeUpgradeModal() {
@@ -3288,10 +3315,18 @@
 
       // Upgrade modal buttons
       document.getElementById('btn-upgrade-later').onclick = closeUpgradeModal;
-      document.getElementById('btn-upgrade-paid').onclick = () => {
+      document.getElementById('btn-upgrade-paid').onclick = async () => {
         // start real payment verification for required package
+        const payBtn = document.getElementById('btn-upgrade-paid');
+        setButtonLoading(payBtn, true, "Loading...");
+        const accountNo = await ensureVirtualAccountNumber();
+        setButtonLoading(payBtn, false);
+        if (!accountNo) {
+          alert("Could not get your virtual account number right now. Please sign out and sign in again, then retry.");
+          return;
+        }
         closeUpgradeModal();
-        openPaymentModal(signedInUser.virtualAccountNumber || "", pendingUpgradeTarget || "Basic");
+        openPaymentModal(accountNo, pendingUpgradeTarget || "Basic");
         startPaymentPolling();
       };
       document.getElementById('btn-payment-close').onclick = () => {
@@ -3333,6 +3368,7 @@
             signedInUser = {
               name: signupUser?.name || nameInput || "User",
               phone: resolvedPhone,
+              pin: pinInput,
               isPaid: paymentState.isPaid,
               package: paymentState.package || "Basic",
               virtualAccountNumber: signupUser?.virtualAccountNumber || paymentState.virtualAccountNumber || "",
@@ -3369,6 +3405,7 @@
             signedInUser = {
               name: String(foundUser.name || nameInput || "User"),
               phone: normalizeLocalPhone(foundUser.phone || phoneInput || ""),
+              pin: pinInput,
               isPaid: localPaid,
               package: String(foundUser.package || "Basic"),
               virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || "",
@@ -3530,7 +3567,7 @@
           return;
         }
         try {
-          const statusResp = await checkPaymentStatus(signedInUser.phone || "", "");
+          const statusResp = await checkPaymentStatus(signedInUser.phone || "", signedInUser.pin || "");
           const paymentState = normalizePaymentStatus(statusResp, signedInUser.package || "Basic");
           signedInUser.isPaid = paymentState.isPaid;
           signedInUser.package = paymentState.package;
@@ -3551,7 +3588,14 @@
             // non-blocking
           }
           if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
-            openPaymentModal(signedInUser.virtualAccountNumber || "", selectedPackage);
+            const accountNo = await ensureVirtualAccountNumber();
+            if (!accountNo) {
+              setFieldError(packageSelect, "Could not fetch your virtual account. Sign out and sign in again, then retry.");
+              isLogSubmitting = false;
+              setButtonLoading(logSubmitBtn, false);
+              return;
+            }
+            openPaymentModal(accountNo, selectedPackage);
             startPaymentPolling();
             isLogSubmitting = false;
             setButtonLoading(logSubmitBtn, false);
