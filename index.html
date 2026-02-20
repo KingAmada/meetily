@@ -228,6 +228,8 @@
 
     .hero-img-container{width:100%;height:220px;overflow:hidden;border-radius:2rem;position:relative;box-shadow:0 20px 25px -5px rgba(14,165,233,0.1);}
     .hero-img-container img{width:100%;height:100%;object-fit:cover;}
+    .hero-slide-img{transition:opacity .55s ease, transform 6s ease;opacity:1;transform:scale(1);}
+    .hero-slide-img.is-changing{opacity:.2;transform:scale(1.03);}
     .step-img{width:80px;height:80px;object-fit:cover;border-radius:1rem;}
 
     .file-input-label{
@@ -291,14 +293,14 @@
       <div id="screen-landing" class="app-screen p-6 space-y-10">
         <div class="space-y-4 pt-4">
           <div class="hero-img-container">
-            <img src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=800" alt="Traveler safety">
+            <img id="landing-hero-image" class="hero-slide-img" src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=800" alt="Traveler safety">
             <div class="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent"></div>
             <div class="absolute bottom-4 left-6 right-6">
-              <p class="text-white text-sm font-bold uppercase tracking-widest drop-shadow-md">Verified Secure Logging</p>
+              <p id="landing-hero-badge" class="text-white text-sm font-bold uppercase tracking-widest drop-shadow-md">Verified Secure Logging</p>
             </div>
           </div>
-          <h1 class="text-4xl font-extrabold leading-tight text-blue-900">Meetup with Confidence.</h1>
-          <p class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
+          <h1 id="landing-hero-headline" class="text-4xl font-extrabold leading-tight text-blue-900">Meetup with Confidence.</h1>
+          <p id="landing-hero-subtext" class="text-lg text-slate-600 leading-relaxed">Going on a date or meeting a stranger? A 2-minute log gives you a 48-hour safety net.</p>
           <div class="flex flex-col gap-3">
             <button id="btn-landing-signup" class="w-full btn-primary font-bold py-5 rounded-2xl shadow-xl">
               Sign Up
@@ -851,6 +853,39 @@
         "Jessica in Abuja logged a meetup.",
         "A traveler in Maiduguri is protected."
       ];
+      const LANDING_HERO_IMAGES = [
+        "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1529236183275-4fdcf2bc987e?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&q=80&w=1200"
+      ];
+      const LANDING_HERO_HEADLINES = [
+        "Meetily Safety Alert."
+      ];
+      const LANDING_HERO_SUBTEXTS = [
+        "Meetup with Confidence",
+        "Quiet protection",
+        "Let someone know. Just in case",
+        "Safety for business meetups",
+        "Meetings with receipts",
+        "Love is blind. Meetily isn't",
+        "Don't be a statistic. Log the meetup",
+        "Log the meetup"
+      ];
+      const LANDING_HERO_BADGES = [
+        "Verified Secure Logging",
+        "She thought it was love. She never came back.",
+        "Chidere went out to hustle. No trace till today.",
+        "Nancy left for a business meeting. Family waited for months.",
+        "Silence after meetup is not normal.",
+        "One log can change the ending.",
+        "Delay is dangerous. Log it now.",
+        "Meetily keeps the trail when stories go dark."
+      ];
 
       // Package rules (NO upfront selection)
       // Basic = details only
@@ -895,6 +930,8 @@
       // Social proof controller
       let toastInterval = null;
       let toastVisibleTimeout = null;
+      let landingHeroIndex = 0;
+      let landingHeroInterval = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
@@ -1345,6 +1382,13 @@
         }
       }
 
+      function parseGpsText(value) {
+        const txt = String(value || "");
+        const parts = txt.split(",").map((p) => Number(String(p).trim()));
+        if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+        return { latitude: parts[0], longitude: parts[1] };
+      }
+
       async function restoreActiveMeetupForUser() {
         try {
           let rows = [];
@@ -1380,6 +1424,24 @@
             const tb = new Date(b.started_at || 0).getTime();
             return tb - ta;
           })[0];
+          const startedAtMs = new Date(latest.started_at || Date.now()).getTime();
+          const gpsPoint = parseGpsText(latest.last_gps || "");
+          const gpsLogs = [];
+          if (gpsPoint) {
+            gpsLogs.push({
+              reason: "restored_last_gps",
+              timestamp: latest.last_gps_at || latest.updated_at || latest.started_at || new Date().toISOString(),
+              latitude: gpsPoint.latitude,
+              longitude: gpsPoint.longitude
+            });
+          }
+          const updates = [];
+          if (latest.last_update_note) {
+            updates.push({
+              note: String(latest.last_update_note),
+              time: latest.last_update_at ? new Date(latest.last_update_at).toLocaleString() : "Earlier"
+            });
+          }
           const details = {
             fullName: latest.full_name || latest.stranger_name || latest.name || "",
             phones: parseJsonSafe(latest.phones_json, []),
@@ -1388,24 +1450,25 @@
             state: latest.state || "",
             lga: latest.lga || "",
             selectedPackage: latest.selected_package || "Basic",
-            strangerImageDataUrls: [],
-            supportImageDataUrls: []
+            strangerImageDataUrls: parseJsonSafe(latest.stranger_images_json, []),
+            supportImageDataUrls: parseJsonSafe(latest.support_images_json, [])
           };
           currentActive = {
-            start: Date.now(),
+            start: Number.isFinite(startedAtMs) ? startedAtMs : Date.now(),
             pkg: latest.selected_package || signedInUser.package || "Basic",
             meetupId: latest.id || `local_${Date.now()}`,
-            preLogPhoto: "",
-            gpsLogs: [],
+            preLogPhoto: latest.prelog_photo || "",
+            gpsLogs,
             details,
-            updates: []
+            updates
           };
           document.getElementById('active-meetup-card-home').classList.remove('hidden');
           document.getElementById('no-active-meetup').classList.add('hidden');
           document.getElementById('protection-text').innerText =
-          `The "Meetily ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+            `The "Meetily ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
           renderActiveMeetupHomeCard();
           renderMeetupDetails();
+          startTimer();
         } catch (_) {
           // Keep UI usable even if restore fails
         }
@@ -1580,6 +1643,31 @@
         }
         nigeriaData = mergeNigeriaDataWithStateList(nigeriaData);
         populateStateOptions();
+      }
+
+      function updateLandingHero(nextIndex) {
+        const image = document.getElementById('landing-hero-image');
+        const badge = document.getElementById('landing-hero-badge');
+        const headline = document.getElementById('landing-hero-headline');
+        const subtext = document.getElementById('landing-hero-subtext');
+        if (!image || !badge || !headline || !subtext) return;
+        landingHeroIndex = nextIndex % LANDING_HERO_IMAGES.length;
+        image.classList.add('is-changing');
+        setTimeout(() => {
+          image.src = LANDING_HERO_IMAGES[landingHeroIndex];
+          badge.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
+          headline.innerText = LANDING_HERO_HEADLINES[0];
+          subtext.innerText = LANDING_HERO_SUBTEXTS[landingHeroIndex] || LANDING_HERO_SUBTEXTS[0];
+          image.classList.remove('is-changing');
+        }, 220);
+      }
+
+      function startLandingHeroRotation() {
+        if (landingHeroInterval) clearInterval(landingHeroInterval);
+        updateLandingHero(landingHeroIndex);
+        landingHeroInterval = setInterval(() => {
+          updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_IMAGES.length);
+        }, 5200);
       }
 
       function ensureMapInitialized() {
@@ -2360,10 +2448,13 @@
               selected_package: activePackage,
               full_name: pendingMeetupData?.fullName || "",
               phones_json: JSON.stringify(pendingMeetupData?.phones || []),
+              stranger_images_json: JSON.stringify(pendingMeetupData?.strangerImageDataUrls || []),
+              support_images_json: JSON.stringify(pendingMeetupData?.supportImageDataUrls || []),
               place_type: pendingMeetupData?.placeType || "",
               address: pendingMeetupData?.address || "",
               state: pendingMeetupData?.state || "",
               lga: pendingMeetupData?.lga || "",
+              prelog_photo: preLogImageDataUrl || "",
               status: "ACTIVE_WATCH",
               started_at: new Date().toISOString(),
               ...(pendingMeetupData?.dynamicFields || {})
@@ -2402,7 +2493,10 @@
         const stepEl = document.getElementById('verify-step');
         const video = document.getElementById('webcam');
         if (!currentActive?.preLogPhoto) {
-          alert("Missing pre-log photo. Start a new meetup log.");
+          const proceed = confirm("Pre-log photo is missing for this restored session. End meetup without liveness?");
+          if (proceed) {
+            await endMeetup();
+          }
           return;
         }
         modal.classList.remove('hidden');
@@ -2513,7 +2607,8 @@
       }
 
       function startTimer() {
-        const end = Date.now() + SCREEN_DURATION;
+        const baseStart = currentActive?.start || Date.now();
+        const end = baseStart + SCREEN_DURATION;
         clearInterval(timerInt);
         timerInt = setInterval(() => {
           const diff = end - Date.now();
@@ -2871,6 +2966,7 @@
       loadNigeriaData();
       updateProfileUserDetails();
       refreshPaymentUi();
+      startLandingHeroRotation();
       showScreen('screen-landing');
       startSocialProof();
       window.addEventListener('beforeunload', stopPaymentPolling);
