@@ -1447,7 +1447,6 @@
       let uiAlertTimeout = null;
       let confirmResolver = null;
       let isSyncingSession = false;
-      const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
       const PACKAGE_META = {
@@ -1731,14 +1730,6 @@
           const normalized = normalizePaymentStatus(resp, signedInUser.package || "Basic");
           if (normalized.virtualAccountNumber) {
             signedInUser.virtualAccountNumber = normalized.virtualAccountNumber;
-            try {
-              await updateUserInDb(signedInUser.phone, {
-                phone_key: phoneKey(signedInUser.phone),
-                virtual_account_number: signedInUser.virtualAccountNumber
-              });
-            } catch (_) {
-              // non-blocking
-            }
           }
         } catch (_) {
           // keep fallback value
@@ -1758,17 +1749,6 @@
           signedInUser.virtualAccountNumber = normalized.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
-          try {
-            await updateUserInDb(signedInUser.phone, {
-              phone_key: phoneKey(signedInUser.phone),
-              package: signedInUser.package,
-              is_paid: signedInUser.isPaid,
-              paid_total: signedInUser.paidTotal,
-              virtual_account_number: signedInUser.virtualAccountNumber
-            });
-          } catch (_) {
-            // non-blocking
-          }
           if (signedInUser.isPaid) {
             if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
               statusEl.innerText = `Paid total ₦${signedInUser.paidTotal.toLocaleString()}. Current plan ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
@@ -1909,103 +1889,6 @@
         return out;
       }
 
-      async function sendToBackend(payload) {
-        const res = await fetch(BACKEND_URL, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-        let json = {};
-        try { json = text ? JSON.parse(text) : {}; } catch (_) { json = { raw: text }; }
-        if (!res.ok || (json.status && String(json.status).toLowerCase() !== "success")) {
-          throw new Error(json.message || "Backend request failed");
-        }
-        return json;
-      }
-
-      function safeGetCreatedId(resp) {
-        return resp?.id || resp?.data?.id || resp?.data?.[0]?.id || "";
-      }
-
-      function extractRows(resp) {
-        if (Array.isArray(resp?.data)) return resp.data;
-        if (Array.isArray(resp?.rows)) return resp.rows;
-        if (Array.isArray(resp?.result)) return resp.result;
-        if (Array.isArray(resp?.data?.rows)) return resp.data.rows;
-        return [];
-      }
-
-      function findUserByPhone(rows, phone) {
-        const targetPhone = phoneKey(phone);
-        return rows.find((u) => phoneKey(u?.phone) === targetPhone) || null;
-      }
-
-      function findUserByPhoneAndPin(rows, phone, pin) {
-        const targetPhone = phoneKey(phone);
-        const targetPin = normalizePin(pin);
-        return rows.find((u) => phoneKey(u?.phone) === targetPhone && normalizePin(u?.pin) === targetPin) || null;
-      }
-
-      async function readUsersByPhone(phone) {
-        // Single backend call to avoid lock contention in Apps Script.
-        const all = await sendToBackend({
-          action: "read",
-          sheet: "Users"
-        });
-        const allRows = extractRows(all);
-        const target = phoneKey(phone);
-        const matched = allRows.filter((u) => phoneKey(u?.phone) === target);
-        return { status: "success", data: matched };
-      }
-
-      async function createUserInDb(data, options = {}) {
-        const skipExistsCheck = !!options.skipExistsCheck;
-        if (!skipExistsCheck) {
-          const existingResp = await readUsersByPhone(data?.phone || "");
-          const existing = findUserByPhone(extractRows(existingResp), data?.phone || "");
-          if (existing) return { status: "exists", data: existing };
-        }
-        return sendToBackend({
-          action: "create",
-          sheet: "Users",
-          data
-        });
-      }
-
-      async function updateUserInDb(phone, data) {
-        if (!normalizePhone(phone)) return { status: "skipped" };
-        const key = phoneKey(phone);
-        const byKey = await sendToBackend({
-          action: "update",
-          sheet: "Users",
-          filters: { phone_key: key },
-          data
-        }).catch(() => null);
-        if (byKey && extractNumber(byKey.updated) > 0) return byKey;
-        const byExact = await sendToBackend({
-          action: "update",
-          sheet: "Users",
-          filters: { phone },
-          data
-        }).catch(() => null);
-        if (byExact && extractNumber(byExact.updated) > 0) return byExact;
-
-        // Final fallback for older rows where phone_key/phone format may not align.
-        const readAll = await sendToBackend({
-          action: "read",
-          sheet: "Users"
-        }).catch(() => ({ status: "error", data: [] }));
-        const rows = extractRows(readAll);
-        const matched = rows.find((u) => phoneKey(u?.phone) === key);
-        if (!matched?.id) return byExact || byKey || { status: "error", updated: 0 };
-        return sendToBackend({
-          action: "update",
-          sheet: "Users",
-          filters: { id: matched.id },
-          data
-        });
-      }
-
       function parseJsonSafe(value, fallback) {
         try {
           return value ? JSON.parse(value) : fallback;
@@ -2014,95 +1897,67 @@
         }
       }
 
-      function parseGpsText(value) {
-        const txt = String(value || "");
-        const parts = txt.split(",").map((p) => Number(String(p).trim()));
-        if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
-        return { latitude: parts[0], longitude: parts[1] };
-      }
-
       async function restoreActiveMeetupForUser() {
         try {
-          let rows = [];
-          try {
-            const resp = await sendToBackend({
-              action: "read",
-              sheet: "Meetups",
-              filters: { user_phone: signedInUser.phone, status: "ACTIVE_WATCH" }
-            });
-            rows = extractRows(resp);
-          } catch (_) {
-            rows = [];
-          }
-          if (!rows.length) {
-            const respAll = await sendToBackend({
-              action: "read",
-              sheet: "Meetups"
-            });
-            const allRows = extractRows(respAll);
-            rows = allRows.filter((r) => {
-              return String(r.status || "") === "ACTIVE_WATCH" && phoneKey(r.user_phone) === phoneKey(signedInUser.phone);
-            });
-          }
-          if (!rows.length) {
+          const res = await fetch(`${PEYGO_API}/apiGetActiveMeetup?phone=${signedInUser.phone}`);
+          const json = await res.json();
+          
+          if (!json || json.status !== "success" || !json.data) {
             currentActive = null;
             document.getElementById('active-meetup-card-home').classList.add('hidden');
             document.getElementById('no-active-meetup').classList.remove('hidden');
             renderMeetupDetails();
             return;
           }
-          const latest = rows.sort((a, b) => {
-            const ta = new Date(a.started_at || 0).getTime();
-            const tb = new Date(b.started_at || 0).getTime();
-            return tb - ta;
-          })[0];
-          const startedAtMs = new Date(latest.started_at || Date.now()).getTime();
-          const gpsPoint = parseGpsText(latest.last_gps || "");
-          const gpsLogs = [];
-          if (gpsPoint) {
-            gpsLogs.push({
-              reason: "restored_last_gps",
-              timestamp: latest.last_gps_at || latest.updated_at || latest.started_at || new Date().toISOString(),
-              latitude: gpsPoint.latitude,
-              longitude: gpsPoint.longitude
-            });
-          }
-          const updates = [];
-          if (latest.last_update_note) {
-            updates.push({
-              note: String(latest.last_update_note),
-              time: latest.last_update_at ? new Date(latest.last_update_at).toLocaleString() : "Earlier"
-            });
-          }
-          const details = {
-            fullName: latest.full_name || latest.stranger_name || latest.name || "",
-            phones: parseJsonSafe(latest.phones_json, []),
-            placeType: latest.place_type || "",
-            address: latest.address || "",
-            state: latest.state || "",
-            lga: latest.lga || "",
-            selectedPackage: latest.selected_package || "Basic",
-            strangerImageDataUrls: parseJsonSafe(latest.stranger_images_json, []),
-            supportImageDataUrls: parseJsonSafe(latest.support_images_json, [])
-          };
+          
+          const latest = json.data;
+          const startedAtMs = new Date(latest._createdDate || Date.now()).getTime();
+          
           currentActive = {
-            start: Number.isFinite(startedAtMs) ? startedAtMs : Date.now(),
-            pkg: latest.selected_package || signedInUser.package || "Basic",
-            meetupId: latest.id || `local_${Date.now()}`,
-            preLogPhoto: latest.prelog_photo || "",
-            gpsLogs,
-            details,
-            updates
+            start: startedAtMs,
+            pkg: latest.selectedPackage || signedInUser.package || "Basic",
+            meetupId: latest._id,
+            preLogPhoto: latest.preLogPhoto || "",
+            gpsLogs: [],
+            updates: [],
+            details: {
+              fullName: latest.fullName || "",
+              placeType: latest.placeType || "",
+              address: latest.address || "",
+              selectedPackage: latest.selectedPackage || "Basic",
+              strangerImageDataUrls: parseJsonSafe(latest.strangerImagesJson, []),
+              supportImageDataUrls: parseJsonSafe(latest.supportImagesJson, [])
+            }
           };
+
+          if (latest.lastGps) {
+            const parts = latest.lastGps.split(",");
+            currentActive.gpsLogs.push({
+              reason: "restored_last_gps",
+              timestamp: latest.lastGpsAt,
+              latitude: Number(parts[0]),
+              longitude: Number(parts[1])
+            });
+          }
+
+          if (latest.lastUpdateNote) {
+            currentActive.updates.push({
+              note: latest.lastUpdateNote,
+              time: new Date(latest.lastUpdateAt).toLocaleString()
+            });
+          }
+
           document.getElementById('active-meetup-card-home').classList.remove('hidden');
           document.getElementById('no-active-meetup').classList.add('hidden');
           document.getElementById('protection-text').innerText =
-            `The "Meetily ${currentActive.pkg}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+            `The "Meetily ${currentActive.pkg}" switch is active. Records auto-destruct in 48 hours.`;
+            
           renderActiveMeetupHomeCard();
           renderMeetupDetails();
           startTimer();
-        } catch (_) {
-          // Keep UI usable even if restore fails
+          
+        } catch (err) {
+          console.error("Failed to restore meetup:", err);
         }
       }
 
@@ -2819,55 +2674,43 @@
         try {
           const pos = await getCurrentGPS();
           const { latitude, longitude } = pos.coords;
+          
           currentActive.gpsLogs.push({
             reason,
             timestamp: new Date().toISOString(),
             latitude,
             longitude
           });
+          
           const status = document.getElementById('gps-status');
-          status.classList.remove('hidden');
-          status.classList.remove('text-rose-600');
+          status.classList.remove('hidden', 'text-rose-600');
           status.classList.add('text-emerald-600');
           status.innerText = `GPS Logged: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          
           if (currentActive.meetupId) {
             try {
-              await sendToBackend({
-                action: "update",
-                sheet: "Meetups",
-                filters: { id: currentActive.meetupId },
-                data: {
-                  last_gps: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-                  last_gps_at: new Date().toISOString(),
-                  status: "ACTIVE_WATCH"
-                }
+              await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  meetupId: currentActive.meetupId,
+                  updateType: "gps",
+                  gpsData: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+                })
               });
             } catch (err) {
               console.error("Meetup GPS update failed:", err);
             }
           }
+          
           renderMeetupDetails();
+          
         } catch (err) {
           currentActive.gpsLogs.push({
             reason,
             timestamp: new Date().toISOString(),
             error: "GPS unavailable"
           });
-          if (currentActive.meetupId) {
-            try {
-              await sendToBackend({
-                action: "update",
-                sheet: "Meetups",
-                filters: { id: currentActive.meetupId },
-                data: {
-                  gps_error: "GPS unavailable",
-                  gps_error_at: new Date().toISOString()
-                }
-              });
-            } catch (updateErr) {
-              console.error("Meetup GPS error update failed:", updateErr);
-            }
-          }
           renderMeetupDetails();
         }
       }
@@ -2962,12 +2805,10 @@
       }
 
       function setProfileFormFromUser(user = {}) {
-        const fpcName = String(user.auth_name || user.fpc_name || "").trim();
-        const fpcPhone = normalizeLocalPhone(user.auth_phone || user.fpc_phone || "");
-        const fpcRelation = String(user.auth_relation || user.fpc_relation || "").trim();
-        let fpcPriority = String(user.auth_priority || user.fpc_priority || "").trim();
-        if (fpcPriority === "Person first, then Police") fpcPriority = "person_then_police";
-        if (fpcPriority === "Police first, then Person") fpcPriority = "police_then_person";
+        const fpcName = String(user.fpcName || "").trim();
+        const fpcPhone = normalizeLocalPhone(user.fpcPhone || "");
+        const fpcRelation = String(user.fpcRelation || "").trim();
+        const fpcPriority = String(user.fpcPriority || "").trim();
 
         document.getElementById('fpc-name').value = fpcName;
         document.getElementById('fpc-phone').value = fpcPhone;
@@ -3219,36 +3060,31 @@
         const activePackage = pendingMeetupData?.selectedPackage || unlockedPackage || "Basic";
         let meetupId = "";
         try {
-          const createResp = await sendToBackend({
-            action: "create",
-            sheet: "Meetups",
-            data: {
-              user_phone: signedInUser.phone || "",
-              user_name: signedInUser.name || "",
-              selected_package: activePackage,
-              full_name: pendingMeetupData?.fullName || "",
-              phones_json: JSON.stringify(pendingMeetupData?.phones || []),
-              stranger_images_json: JSON.stringify(pendingMeetupData?.strangerImageDataUrls || []),
-              support_images_json: JSON.stringify(pendingMeetupData?.supportImageDataUrls || []),
-              place_type: pendingMeetupData?.placeType || "",
-              address: pendingMeetupData?.address || "",
-              state: pendingMeetupData?.state || "",
-              lga: pendingMeetupData?.lga || "",
-              prelog_photo: preLogImageDataUrl || "",
-              status: "ACTIVE_WATCH",
-              started_at: new Date().toISOString(),
-              ...(pendingMeetupData?.dynamicFields || {})
-            }
+          const response = await fetch(`${PEYGO_API}/apiCreateMeetup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: signedInUser?.phone || "",
+              activePackage: activePackage,
+              pendingData: pendingMeetupData || {},
+              preLogPhoto: preLogImageDataUrl || ""
+            })
           });
-          meetupId = safeGetCreatedId(createResp);
+          const result = await response.json();
+          if (!response.ok || result?.status !== "success") {
+            throw new Error(result?.message || "Meetup creation failed");
+          }
+          meetupId = String(result?.meetupId || "");
         } catch (err) {
           console.error("Meetup create failed:", err);
+          showUiAlert("Check your connection. We couldn't secure the log.", "error");
+          return;
         }
 
         currentActive = {
           start: Date.now(),
           pkg: activePackage,
-          meetupId: meetupId || `local_${Date.now()}`,
+          meetupId: meetupId,
           preLogPhoto: preLogImageDataUrl,
           gpsLogs: [],
           details: pendingMeetupData || {},
@@ -3374,14 +3210,10 @@
       async function endMeetup() {
         if (currentActive?.meetupId) {
           try {
-            await sendToBackend({
-              action: "update",
-              sheet: "Meetups",
-              filters: { id: currentActive.meetupId },
-              data: {
-                status: "ENDED",
-                ended_at: new Date().toISOString()
-              }
+            await fetch(`${PEYGO_API}/apiEndMeetup`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ meetupId: currentActive.meetupId, livenessPhoto: "" })
             });
           } catch (err) {
             console.error("Meetup end update failed:", err);
@@ -3545,101 +3377,60 @@
         const isSignup = document.getElementById('auth-title').innerText === 'Sign Up';
         setButtonLoading(submitBtn, true, isSignup ? "Creating account..." : "Signing in...");
         toggleBtn.disabled = true;
-        toggleBtn.classList.add('opacity-60');
 
         try {
           if (isSignup) {
-            const existingResp = await readUsersByPhone(phoneInput);
-            const existingRows = extractRows(existingResp);
-            if (findUserByPhone(existingRows, phoneInput)) {
+            const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
+            if (signupResp.isNew === false) {
               setFieldError(document.getElementById('auth-phone'), "User already exists. Please sign in.");
               showUiAlert("User already exists. Please sign in.", "error");
               return;
             }
-
-            const signupResp = await peygoSignup(nameInput || "User", phoneInput, pinInput);
             const signupUser = signupResp?.user || {};
-            const paymentState = normalizePaymentStatus(signupResp, signupUser?.package || "Basic");
-            const resolvedPhone = normalizeLocalPhone(signupUser?.phone || phoneInput || "");
             signedInUser = {
-              name: signupUser?.name || nameInput || "User",
-              phone: resolvedPhone,
+              name: signupUser?.name || nameInput,
+              phone: signupUser?.phone || phoneInput,
               pin: pinInput,
-              isPaid: paymentState.isPaid,
-              package: paymentState.package || "Basic",
-              virtualAccountNumber: signupUser?.virtualAccountNumber || paymentState.virtualAccountNumber || "",
-              paidTotal: paymentState.paidTotal
+              isPaid: signupUser?.isPaid || false,
+              package: signupUser?.package || "Basic",
+              virtualAccountNumber: signupUser?.virtualAccountNumber || "",
+              paidTotal: signupUser?.paidTotal || 0
             };
             setProfileFormFromUser({});
-            unlockedPackage = signedInUser.package || "Basic";
-            try {
-              await createUserInDb({
-                phone: resolvedPhone,
-                phone_key: phoneKey(resolvedPhone),
-                name: signedInUser.name,
-                pin: pinInput,
-                package: signedInUser.package,
-                is_paid: signedInUser.isPaid,
-                paid_total: signedInUser.paidTotal,
-                virtual_account_number: signedInUser.virtualAccountNumber
-              }, { skipExistsCheck: true });
-            } catch (_) {
-              setFieldError(document.getElementById('auth-phone'), "Unable to save new user.");
-              return;
-            }
+            unlockedPackage = signedInUser.package;
           } else {
-            const readResp = await readUsersByPhone(phoneInput);
-            const users = extractRows(readResp);
-            const foundUser = findUserByPhoneAndPin(users, phoneInput, pinInput);
-            if (!foundUser) {
-              setFieldError(document.getElementById('auth-pin'), "User not found or invalid PIN");
-              showUiAlert("User not found or invalid PIN.", "error");
+            const loginRes = await fetch(`${PEYGO_API}/apiSafeMeetLogin`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: phoneInput, pin: pinInput })
+            });
+            const loginResp = await loginRes.json();
+            if (loginResp.status !== "success") {
+              setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
+              showUiAlert("Invalid phone or PIN", "error");
               return;
             }
-
-            const localPaid = extractNumber(foundUser.paid_total || foundUser.paidTotal) > 0 || String(foundUser.is_paid || "").toLowerCase() === "true";
+            const loginUser = loginResp?.user || {};
             signedInUser = {
-              name: String(foundUser.name || nameInput || "User"),
-              phone: normalizeLocalPhone(foundUser.phone || phoneInput || ""),
+              name: loginUser?.name || "User",
+              phone: loginUser?.phone || phoneInput,
               pin: pinInput,
-              isPaid: localPaid,
-              package: String(foundUser.package || "Basic"),
-              virtualAccountNumber: foundUser.virtual_account_number || foundUser.virtualAccountNumber || "",
-              paidTotal: extractNumber(foundUser.paid_total || foundUser.paidTotal)
+              isPaid: loginUser?.isPaid || false,
+              package: loginUser?.package || "Basic",
+              virtualAccountNumber: loginUser?.virtualAccountNumber || "",
+              paidTotal: loginUser?.paidTotal || 0
             };
-            setProfileFormFromUser(foundUser);
-            unlockedPackage = signedInUser.package || "Basic";
-            checkPaymentStatus(phoneInput, pinInput)
-              .then((statusResp) => {
-                const paymentState = normalizePaymentStatus(statusResp, signedInUser.package || "Basic");
-                signedInUser.isPaid = paymentState.isPaid;
-                signedInUser.package = paymentState.package;
-                signedInUser.paidTotal = paymentState.paidTotal;
-                signedInUser.virtualAccountNumber = paymentState.virtualAccountNumber || signedInUser.virtualAccountNumber;
-                unlockedPackage = signedInUser.package;
-                updateProfileUserDetails();
-                updateUserInDb(signedInUser.phone, {
-                  name: signedInUser.name,
-                  phone_key: phoneKey(signedInUser.phone),
-                  package: signedInUser.package,
-                  is_paid: signedInUser.isPaid,
-                  paid_total: signedInUser.paidTotal,
-                  virtual_account_number: signedInUser.virtualAccountNumber
-                }).catch(() => {});
-              })
-              .catch(() => {});
+            setProfileFormFromUser(loginResp.user);
+            unlockedPackage = signedInUser.package;
           }
+          finalizeSigninUi();
         } catch (err) {
           setFieldError(document.getElementById('auth-phone'), err?.message || "Unable to reach server");
-          return;
         } finally {
           setButtonLoading(submitBtn, false);
           toggleBtn.disabled = false;
-          toggleBtn.classList.remove('opacity-60');
           isAuthSubmitting = false;
         }
-
-        finalizeSigninUi();
         stopPaymentPolling();
         closePaymentModal();
       };
@@ -3654,28 +3445,26 @@
         const priorityEl = document.getElementById('fpc-priority');
         const fpcPriority = priorityEl.value;
         const priorityText = priorityEl.options[priorityEl.selectedIndex].text;
-        document.getElementById('fpc-summary').innerText =
-          `${fpcName} (${fpcRelation}) • ${fpcPhone} • ${priorityText}`;
         try {
-          await updateUserInDb(signedInUser.phone, {
-            phone_key: phoneKey(signedInUser.phone),
-            auth_name: fpcName,
-            auth_phone: fpcPhone,
-            auth_relation: fpcRelation,
-            auth_priority: fpcPriority,
-            auth_priority_text: priorityText,
-            fpc_name: fpcName,
-            fpc_phone: fpcPhone,
-            fpc_relation: fpcRelation,
-            fpc_priority: fpcPriority,
-            updated_at: new Date().toISOString()
+          await fetch(`${PEYGO_API}/apiUpdateProfile`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: signedInUser.phone,
+              fpcName,
+              fpcPhone,
+              fpcRelation,
+              fpcPriority
+            })
           });
+          document.getElementById('fpc-summary').innerText =
+            `${fpcName} (${fpcRelation}) • ${fpcPhone} • ${priorityText}`;
         } catch (err) {
           console.error("Profile update failed:", err);
           showUiAlert("Could not save FPC profile. Please try again.", "error");
           return;
         }
-        showUiAlert("Profile saved.", "success");
+        showUiAlert("Profile saved successfully.", "success");
       };
       document.getElementById('btn-logout').onclick = logout;
 
@@ -3694,22 +3483,23 @@
           note,
           time: new Date().toLocaleString()
         });
+        
         if (currentActive.meetupId) {
           try {
-            await sendToBackend({
-              action: "update",
-              sheet: "Meetups",
-              filters: { id: currentActive.meetupId },
-              data: {
-                last_update_note: note,
-                last_update_at: new Date().toISOString(),
-                status: "ACTIVE_WATCH"
-              }
+            await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                meetupId: currentActive.meetupId,
+                updateType: "note",
+                noteData: note
+              })
             });
           } catch (err) {
             console.error("Meetup update write failed:", err);
           }
         }
+        
         updateInput.value = "";
         removeFieldError(updateInput);
         renderMeetupDetails();
@@ -3781,17 +3571,6 @@
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
           updateProfileUserDetails();
-          try {
-            await updateUserInDb(signedInUser.phone, {
-              phone_key: phoneKey(signedInUser.phone),
-              package: signedInUser.package,
-              is_paid: signedInUser.isPaid,
-              paid_total: signedInUser.paidTotal,
-              virtual_account_number: signedInUser.virtualAccountNumber
-            });
-          } catch (_) {
-            // non-blocking
-          }
           if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
             const accountNo = await ensureVirtualAccountNumber();
             if (!accountNo) {
