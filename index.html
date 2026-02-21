@@ -20,14 +20,14 @@
   <meta property="og:title" content="Meetily | Log Meetups. Stay Protected." />
   <meta property="og:description" content="Going on a date or meeting a stranger? Meetily gives you a 48-hour safety net with meetup logs, GPS options, media evidence, and emergency escalation workflows." />
   <meta property="og:url" content="https://kingamada.github.io/safemeet/" />
-  <meta property="og:image" content="https://kingamada.github.io/safemeet/favicon.png" />
+  <meta property="og:image" content="https://kingamada.github.io/safemeet/Meetily%20Logo.png" />
   <meta property="og:image:alt" content="Meetily logo and safety meetup platform preview" />
   <meta property="og:locale" content="en_NG" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Meetily | Log Meetups. Stay Protected." />
   <meta name="twitter:description" content="A safety companion for dates, meetups, hangouts, and business meetings in Nigeria. Create a safety trail before you go." />
-  <meta name="twitter:image" content="https://kingamada.github.io/safemeet/favicon.png" />
+  <meta name="twitter:image" content="https://kingamada.github.io/safemeet/Meetily%20Logo.png" />
   <meta name="twitter:image:alt" content="Meetily safety app logo" />
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,11 +37,11 @@
   <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
   <script src="https://cdn.amcharts.com/lib/5/geodata/nigeriaLow.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link rel="icon" type="image/png" href="./favicon.png" />
-  <link rel="shortcut icon" type="image/png" href="./favicon.png" />
-  <link rel="apple-touch-icon" href="./favicon.png" />
-  <link rel="icon" sizes="192x192" href="./favicon.png" />
-  <link rel="icon" sizes="512x512" href="./favicon.png" />
+  <link rel="icon" type="image/png" href="./Meetily%20Fav%20Icon.png" />
+  <link rel="shortcut icon" type="image/png" href="./Meetily%20Fav%20Icon.png" />
+  <link rel="apple-touch-icon" href="./Meetily%20Fav%20Icon.png" />
+  <link rel="icon" sizes="192x192" href="./Meetily%20Fav%20Icon.png" />
+  <link rel="icon" sizes="512x512" href="./Meetily%20Fav%20Icon.png" />
 
   <script type="application/ld+json">
     {
@@ -53,7 +53,7 @@
         "name": "Meetily"
       },
       "url": "https://kingamada.github.io/safemeet/",
-      "logo": "https://kingamada.github.io/safemeet/favicon.png",
+      "logo": "https://kingamada.github.io/safemeet/Meetily%20Logo.png",
       "sameAs": []
     }
   </script>
@@ -74,7 +74,7 @@
       "applicationCategory": "SafetyApplication",
       "operatingSystem": "Web",
       "url": "https://kingamada.github.io/safemeet/",
-      "image": "https://kingamada.github.io/safemeet/favicon.png",
+      "image": "https://kingamada.github.io/safemeet/Meetily%20Logo.png",
       "description": "A safety platform for dates and meetups: log details, enable location tracking, attach media evidence, and trigger emergency escalation if check-in fails.",
       "offers": [
         {
@@ -565,6 +565,11 @@
         </div>
       </div>
     </div>
+    <div id="ui-alert" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-[122] w-[90%] max-w-sm">
+      <div id="ui-alert-box" class="rounded-2xl border border-blue-100 bg-white/95 backdrop-blur-md shadow-xl px-4 py-3">
+        <p id="ui-alert-text" class="text-xs font-black uppercase tracking-widest text-blue-700"></p>
+      </div>
+    </div>
 
     <!-- Global Header -->
     <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100 relative">
@@ -573,9 +578,8 @@
           <i class="ph-bold ph-caret-left text-sm"></i>
         </button>
       </div>
-      <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-        <i class="ph-bold ph-shield-check text-cyan-500 text-2xl"></i>
-        <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">Meetily</span>
+      <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
+        <img src="./Meetily%20Logo.png" alt="Meetily logo" class="h-8 w-auto object-contain">
       </div>
       <div id="user-info-reveal" class="hidden w-20 flex items-center justify-end gap-2">
         <span id="header-user-name" class="hidden sm:block max-w-[88px] truncate text-xs font-black text-blue-700 uppercase tracking-widest"></span>
@@ -870,13 +874,8 @@
 
         <form id="log-form" class="space-y-6 pb-20">
           <div class="space-y-2">
-            <label for="log-package" class="block text-xs font-black text-blue-900 uppercase tracking-widest">Select Package *</label>
-            <select id="log-package" required class="form-input">
-              <option value="">Choose package...</option>
-              <option value="Basic">Basic</option>
-              <option value="Standard">Standard</option>
-              <option value="Confidence Plus">Confidence Plus</option>
-            </select>
+            <label class="block text-xs font-black text-blue-900 uppercase tracking-widest">Select Package *</label>
+            <input type="hidden" id="log-package" required>
             <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Payment is verified at log submission.</p>
             <div id="package-options" class="package-choices mt-2">
               <button type="button" class="package-pill" data-package="Basic">
@@ -896,7 +895,7 @@
           </div>
 
           <div class="space-y-4">
-            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">The Stranger</h3>
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Enter the Stranger</h3>
             <div class="grid grid-cols-2 gap-4">
               <input type="text" id="fname" placeholder="First Name (Optional)" class="form-input">
               <input type="text" id="lname" placeholder="Last Name (Optional)" class="form-input">
@@ -1152,6 +1151,19 @@
           <div class="flex justify-center gap-4">
             <button type="button" id="btn-capture-prelog" class="btn-primary px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs">Capture & Save Log</button>
             <button type="button" id="btn-cancel-prelog" class="text-rose-500 font-black uppercase tracking-widest text-xs">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: CONFIRM -->
+      <div id="modal-confirm" class="hidden fixed inset-0 bg-slate-900/55 backdrop-blur-md z-[121] p-4 flex items-center justify-center">
+        <div class="w-full max-w-sm rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+          <div class="p-6 space-y-4">
+            <p id="confirm-text" class="text-sm text-slate-700 leading-relaxed"></p>
+          </div>
+          <div class="p-4 border-t border-slate-100 grid grid-cols-2 gap-3">
+            <button type="button" id="btn-confirm-cancel" class="py-3 rounded-xl bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-widest">Cancel</button>
+            <button type="button" id="btn-confirm-ok" class="py-3 rounded-xl btn-primary font-black text-xs uppercase tracking-widest">Proceed</button>
           </div>
         </div>
       </div>
@@ -1432,6 +1444,8 @@
       let testimonialInterval = null;
       let currentScreenId = "screen-landing";
       const screenHistory = [];
+      let uiAlertTimeout = null;
+      let confirmResolver = null;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
@@ -1648,6 +1662,50 @@
         closeLegalModals();
         if (kind === 'terms') document.getElementById('modal-terms')?.classList.remove('hidden');
         if (kind === 'privacy') document.getElementById('modal-privacy')?.classList.remove('hidden');
+      }
+
+      function showUiAlert(message, kind = "info") {
+        const root = document.getElementById('ui-alert');
+        const box = document.getElementById('ui-alert-box');
+        const text = document.getElementById('ui-alert-text');
+        if (!root || !box || !text) return;
+        text.innerText = message || "";
+        box.classList.remove('border-blue-100', 'border-emerald-200', 'border-rose-200');
+        text.classList.remove('text-blue-700', 'text-emerald-700', 'text-rose-700');
+        if (kind === "success") {
+          box.classList.add('border-emerald-200');
+          text.classList.add('text-emerald-700');
+        } else if (kind === "error") {
+          box.classList.add('border-rose-200');
+          text.classList.add('text-rose-700');
+        } else {
+          box.classList.add('border-blue-100');
+          text.classList.add('text-blue-700');
+        }
+        root.classList.remove('hidden');
+        if (uiAlertTimeout) clearTimeout(uiAlertTimeout);
+        uiAlertTimeout = setTimeout(() => root.classList.add('hidden'), 3000);
+      }
+
+      function askUiConfirm(message) {
+        const modal = document.getElementById('modal-confirm');
+        const text = document.getElementById('confirm-text');
+        if (!modal || !text) return Promise.resolve(false);
+        text.innerText = message || "Are you sure?";
+        modal.classList.remove('hidden');
+        return new Promise((resolve) => {
+          confirmResolver = resolve;
+        });
+      }
+
+      function resolveUiConfirm(ok) {
+        const modal = document.getElementById('modal-confirm');
+        modal?.classList.add('hidden');
+        if (confirmResolver) {
+          const resolve = confirmResolver;
+          confirmResolver = null;
+          resolve(!!ok);
+        }
       }
 
       function packageCovers(currentPackage, requiredPackage) {
@@ -3192,7 +3250,7 @@
         const stepEl = document.getElementById('verify-step');
         const video = document.getElementById('webcam');
         if (!currentActive?.preLogPhoto) {
-          const proceed = confirm("Pre-log photo is missing for this restored session. End meetup without liveness?");
+          const proceed = await askUiConfirm("Pre-log photo is missing for this restored session. End meetup without liveness?");
           if (proceed) {
             await endMeetup();
           }
@@ -3223,7 +3281,7 @@
           const msg = err?.message === "ModelLoadError"
             ? "Liveness models could not load. Check internet and retry."
             : describeCameraError(err);
-          alert(msg);
+          showUiAlert(msg, "error");
           closeVerifyModal();
         }
       }
@@ -3302,7 +3360,7 @@
         document.getElementById('meetup-update-input').value = "";
 
         showScreen('screen-home');
-        alert("Meetily: Data permanently deleted. Meetup secured.");
+        showUiAlert("Meetily: Data permanently deleted. Meetup secured.", "success");
       }
 
       function startTimer() {
@@ -3348,6 +3406,11 @@
       });
       document.getElementById('modal-privacy')?.addEventListener('click', (e) => {
         if (e.target.id === 'modal-privacy') closeLegalModals();
+      });
+      document.getElementById('btn-confirm-cancel').onclick = () => resolveUiConfirm(false);
+      document.getElementById('btn-confirm-ok').onclick = () => resolveUiConfirm(true);
+      document.getElementById('modal-confirm')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modal-confirm') resolveUiConfirm(false);
       });
 
       // Bottom nav
@@ -3403,7 +3466,7 @@
         const accountNo = await ensureVirtualAccountNumber();
         setButtonLoading(payBtn, false);
         if (!accountNo) {
-          alert("Could not get your virtual account number right now. Please sign out and sign in again, then retry.");
+          showUiAlert("Could not get your virtual account number right now. Please sign out and sign in again, then retry.", "error");
           return;
         }
         closeUpgradeModal();
@@ -3438,7 +3501,7 @@
             const existingRows = extractRows(existingResp);
             if (findUserByPhone(existingRows, phoneInput)) {
               setFieldError(document.getElementById('auth-phone'), "User already exists. Please sign in.");
-              alert("User already exists. Please sign in.");
+              showUiAlert("User already exists. Please sign in.", "error");
               return;
             }
 
@@ -3478,7 +3541,7 @@
             const foundUser = findUserByPhoneAndPin(users, phoneInput, pinInput);
             if (!foundUser) {
               setFieldError(document.getElementById('auth-pin'), "User not found or invalid PIN");
-              alert("User not found or invalid PIN.");
+              showUiAlert("User not found or invalid PIN.", "error");
               return;
             }
 
@@ -3557,16 +3620,16 @@
           });
         } catch (err) {
           console.error("Profile update failed:", err);
-          alert("Could not save FPC profile. Please try again.");
+          showUiAlert("Could not save FPC profile. Please try again.", "error");
           return;
         }
-        alert("Profile saved.");
+        showUiAlert("Profile saved.", "success");
       };
       document.getElementById('btn-logout').onclick = logout;
 
       document.getElementById('btn-add-update').onclick = async () => {
         if (!currentActive) {
-          alert("No active meetup.");
+          showUiAlert("No active meetup.", "error");
           return;
         }
         const updateInput = document.getElementById('meetup-update-input');
