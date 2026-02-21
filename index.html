@@ -158,6 +158,14 @@
       --text-main:#0c4a6e;
       --header-h:64px;
       --nav-h:80px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --app-h: 100vh;
+    }
+
+    @supports (height: 100dvh) {
+      :root {
+        --app-h: 100dvh;
+      }
     }
 
     body{
@@ -223,7 +231,7 @@
 
     /* Screens must account for header + fixed bottom nav */
     .app-screen{
-      height: calc(100vh - var(--header-h) - var(--nav-h));
+      height: calc(var(--app-h) - var(--header-h) - var(--nav-h) - var(--safe-bottom));
       display:none;
       flex-direction:column;
       animation: slideUp .5s cubic-bezier(0.16,1,0.3,1);
@@ -473,7 +481,7 @@
         padding-right:14px !important;
       }
       .app-screen{
-        height:calc(100vh - var(--header-h) - var(--nav-h));
+        height:calc(var(--app-h) - var(--header-h) - var(--nav-h) - var(--safe-bottom));
         padding-bottom:14px;
       }
       #screen-landing,
@@ -516,6 +524,7 @@
         height:72px !important;
         padding-left:14px !important;
         padding-right:14px !important;
+        padding-bottom:var(--safe-bottom) !important;
       }
       #nav-log > div{
         width:48px;
@@ -546,6 +555,18 @@
     .map-dot{animation:dotBlink 1.8s ease-in-out infinite;transform-origin:center;}
     .map-dot-green{fill:#22c55e;}
     .map-dot-yellow{fill:#eab308;}
+
+    #app-shell{
+      height: var(--app-h);
+      max-height: var(--app-h);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    #app-nav{
+      bottom: var(--safe-bottom) !important;
+      height: calc(var(--nav-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+    }
 
     /* Compact UI tuning */
     .compact-ui .app-screen{padding-bottom:10px;}
@@ -583,7 +604,7 @@
 
 <body class="animated-bg overflow-hidden">
 
-  <div class="compact-ui max-w-md mx-auto h-screen shadow-2xl overflow-hidden relative border-x border-slate-200 bg-white/85 backdrop-blur-xl">
+  <div id="app-shell" class="compact-ui max-w-md mx-auto h-screen shadow-2xl overflow-hidden relative border-x border-slate-200 bg-white/85 backdrop-blur-xl">
 
     <!-- Social Proof Toast -->
     <div id="social-proof-toast">
@@ -1485,6 +1506,7 @@
       let isAuthSubmitting = false;
       let isLogSubmitting = false;
       let isPrelogCaptureBusy = false;
+      let isEndingMeetup = false;
       let paymentPollInterval = null;
       let requiredPaymentPackage = null;
       let pendingPaymentFingerprint = "";
@@ -1926,6 +1948,7 @@
         currentActive = null;
         pendingMeetupData = null;
         preLogImageDataUrl = "";
+        resetLogFeatureSelections();
         requiredPaymentPackage = null;
         pendingPaymentFingerprint = "";
         unlockedPackage = "Basic";
@@ -2018,6 +2041,7 @@
           
           if (!json || json.status !== "success" || !json.data) {
             currentActive = null;
+            resetLogFeatureSelections();
             document.getElementById('active-meetup-card-home').classList.add('hidden');
             document.getElementById('no-active-meetup').classList.remove('hidden');
             renderMeetupDetails();
@@ -2715,8 +2739,12 @@
           showUiAlert("Syncing your last meetup session. Please wait...", "info");
           return;
         }
-        if (currentActive) showScreen('screen-active');
-        else showScreen('screen-log-form');
+        if (currentActive) {
+          showScreen('screen-active');
+          return;
+        }
+        resetLogFeatureSelections();
+        showScreen('screen-log-form');
       }
 
       function addPhoneField() {
@@ -3067,6 +3095,26 @@
         return "Basic";
       }
 
+      function resetLogFeatureSelections() {
+        const gpsStatus = document.getElementById('gps-status');
+        if (gpsStatus) {
+          gpsStatus.classList.add('hidden');
+          gpsStatus.classList.remove('text-rose-600');
+          gpsStatus.classList.add('text-emerald-600');
+          gpsStatus.innerText = "";
+          delete gpsStatus.dataset.lat;
+          delete gpsStatus.dataset.lng;
+        }
+        const strangerInput = document.getElementById('img-stranger');
+        const supportInput = document.getElementById('img-support');
+        if (strangerInput) strangerInput.value = "";
+        if (supportInput) supportInput.value = "";
+        const strangerName = document.getElementById('fn-img-stranger');
+        const supportName = document.getElementById('fn-img-support');
+        if (strangerName) strangerName.innerText = "";
+        if (supportName) supportName.innerText = "";
+      }
+
       async function getCameraPermission() {
         if (!navigator.permissions?.query) return cameraPermissionState;
         try {
@@ -3235,6 +3283,7 @@
       }
 
       async function startLivenessCheck() {
+        if (isEndingMeetup) return;
         if (livenessSession?.processing) return;
         const modal = document.getElementById('modal-verify');
         const status = document.getElementById('verify-status');
@@ -3280,6 +3329,7 @@
       }
 
       async function captureAndVerifyLiveness() {
+        if (isEndingMeetup) return;
         const status = document.getElementById('verify-status');
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('verify-canvas');
@@ -3300,9 +3350,17 @@
           const liveImage = captureFrame(video, canvas);
           const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
           if (score >= 0.60) {
-            status.innerText = "Liveness confirmed";
+            isEndingMeetup = true;
+            document.getElementById('btn-verify-capture').classList.add('hidden');
+            const cancelBtn = document.getElementById('btn-cancel-verify');
+            if (cancelBtn) {
+              cancelBtn.disabled = true;
+              cancelBtn.classList.add('opacity-60');
+            }
+            status.innerText = "Liveness confirmed. Finalizing...";
             status.style.color = "#10b981";
-            setTimeout(() => endMeetup(), 700);
+            await new Promise((resolve) => setTimeout(resolve, 350));
+            await endMeetup();
           } else {
             status.innerText = "Face mismatch. Try again.";
             status.style.color = "#ef4444";
@@ -3311,7 +3369,13 @@
         } catch (_) {
           status.innerText = "Verification failed. Try again.";
           status.style.color = "#ef4444";
+          isEndingMeetup = false;
           setLivenessBusy(false);
+          const cancelBtn = document.getElementById('btn-cancel-verify');
+          if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.classList.remove('opacity-60');
+          }
         }
       }
 
@@ -3322,11 +3386,18 @@
           livenessAutoTimer = null;
         }
         livenessSession = null;
+        isEndingMeetup = false;
         setLivenessBusy(false);
+        const cancelBtn = document.getElementById('btn-cancel-verify');
+        if (cancelBtn) {
+          cancelBtn.disabled = false;
+          cancelBtn.classList.remove('opacity-60');
+        }
         closeCamera(document.getElementById('webcam'));
       }
 
       async function endMeetup() {
+        isEndingMeetup = true;
         if (currentActive?.meetupId) {
           try {
             await fetch(`${PEYGO_API}/apiEndMeetup`, {
@@ -3341,6 +3412,7 @@
         clearInterval(timerInt);
         timerInt = null;
         stopGPSLogging();
+        resetLogFeatureSelections();
         currentActive = null;
         preLogImageDataUrl = "";
         closeVerifyModal();
@@ -3354,6 +3426,7 @@
 
         showScreen('screen-home');
         showUiAlert("Meetily: Data permanently deleted. Meetup secured.", "success");
+        isEndingMeetup = false;
       }
 
       function startTimer() {
@@ -3422,6 +3495,7 @@
           showScreen('screen-active');
           return;
         }
+        resetLogFeatureSelections();
         showScreen('screen-log-form');
       };
 
