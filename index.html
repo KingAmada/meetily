@@ -1446,6 +1446,7 @@
       const screenHistory = [];
       let uiAlertTimeout = null;
       let confirmResolver = null;
+      let isSyncingSession = false;
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
@@ -1793,6 +1794,20 @@
         paymentPollInterval = setInterval(verifyPaymentNow, 5000);
       }
 
+      function setSessionSyncState(syncing) {
+        isSyncingSession = !!syncing;
+        const logBtn = document.getElementById('btn-home-log');
+        const navLog = document.getElementById('nav-log');
+        if (logBtn) {
+          logBtn.disabled = !!syncing;
+          logBtn.classList.toggle('opacity-70', !!syncing);
+        }
+        if (navLog) {
+          navLog.disabled = !!syncing;
+          navLog.classList.toggle('opacity-70', !!syncing);
+        }
+      }
+
       function finalizeSigninUi() {
         updateProfileUserDetails();
         refreshPaymentUi();
@@ -1800,7 +1815,10 @@
         document.getElementById('user-info-reveal').classList.remove('hidden');
         showScreen('screen-home');
         startUsersMapPulse();
-        restoreActiveMeetupForUser().catch(() => {});
+        setSessionSyncState(true);
+        restoreActiveMeetupForUser()
+          .catch(() => {})
+          .finally(() => setSessionSyncState(false));
       }
 
       function logout() {
@@ -1818,6 +1836,7 @@
         requiredPaymentPackage = null;
         unlockedPackage = "Basic";
         signedInUser = { name: "", phone: "", pin: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
+        setSessionSyncState(false);
         document.getElementById('app-nav').classList.add('hidden');
         document.getElementById('user-info-reveal').classList.add('hidden');
         document.getElementById('active-meetup-card-home').classList.add('hidden');
@@ -2723,6 +2742,10 @@
       }
 
       function handleLogNav() {
+        if (isSyncingSession) {
+          showUiAlert("Syncing your last meetup session. Please wait...", "info");
+          return;
+        }
         if (currentActive) showScreen('screen-active');
         else showScreen('screen-log-form');
       }
@@ -3439,7 +3462,17 @@
       document.getElementById('nav-log').onclick = handleLogNav;
 
       // Home card button
-      document.getElementById('btn-home-log').onclick = () => showScreen('screen-log-form');
+      document.getElementById('btn-home-log').onclick = () => {
+        if (isSyncingSession) {
+          showUiAlert("Syncing your last meetup session. Please wait...", "info");
+          return;
+        }
+        if (currentActive) {
+          showScreen('screen-active');
+          return;
+        }
+        showScreen('screen-log-form');
+      };
 
       document.querySelectorAll('#package-options .package-pill').forEach((btn) => {
         btn.onclick = () => setSelectedPackage(btn.dataset.package || "");
@@ -3709,6 +3742,15 @@
       // Log form submit => capture photo first, then start watch
       document.getElementById('log-form').onsubmit = async (e) => {
         e.preventDefault();
+        if (isSyncingSession) {
+          showUiAlert("Syncing your last meetup session. Please wait...", "info");
+          return;
+        }
+        if (currentActive) {
+          showUiAlert("You already have an active meetup. End it first before creating another.", "error");
+          showScreen('screen-active');
+          return;
+        }
         if (isLogSubmitting) return;
         if (!validateLogForm()) return;
         isLogSubmitting = true;
