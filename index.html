@@ -444,6 +444,16 @@
       transform:translateZ(60px);
       transform-style:preserve-3d;
     }
+    .reveal-on-scroll{
+      opacity:0;
+      transform:translateY(26px) scale(.98);
+      transition:opacity .65s ease, transform .65s cubic-bezier(.22,1,.36,1);
+      will-change:opacity, transform;
+    }
+    .reveal-on-scroll.in-view{
+      opacity:1;
+      transform:translateY(0) scale(1);
+    }
 
     @media (max-width: 640px){
       .max-w-md{
@@ -622,13 +632,13 @@
           <p class="text-center text-xs font-bold text-slate-500">Your spirit might hunt them or not, but Meetily will ensure police have neccessary data incase of what we don't pray for happen</p>
         </div>
 
-        <div class="bg-blue-600 text-white p-6 rounded-[2.5rem] text-center shadow-xl shadow-blue-500/30">
+        <div class="bg-blue-600 text-white p-6 rounded-[2.5rem] text-center shadow-xl shadow-blue-500/30 reveal-on-scroll">
           <p class="font-black text-lg">Trusted by over 15,432 Solo Users</p>
         </div>
 
-        <div class="bg-gradient-to-br from-blue-900 to-blue-700 p-8 rounded-[3rem] text-white space-y-8 shadow-2xl">
+        <div class="bg-gradient-to-br from-blue-900 to-blue-700 p-8 rounded-[3rem] text-white space-y-8 shadow-2xl reveal-on-scroll">
           <h2 class="text-3xl font-black leading-tight">Don't Be A Statistic.</h2>
-          <p class="text-blue-100 text-sm">Every year, thousands of solo travelers face unforeseen dangers. Prep is key.</p>
+          <p class="text-blue-100 text-sm">Every year, thousands of individuals face unforeseen dangers. Prep is key.</p>
 
           <div class="grid grid-cols-1 gap-6">
             <div class="flex items-center gap-4">
@@ -647,7 +657,7 @@
           <p class="text-center font-bold italic text-blue-200 pt-4">Don't Wait, Secure Your Trip.</p>
         </div>
 
-        <div class="space-y-8">
+        <div class="space-y-8 reveal-on-scroll">
           <h2 class="text-2xl font-black text-blue-900 text-center">Safety in 3 Simple Steps</h2>
 
           <div class="space-y-10">
@@ -657,8 +667,10 @@
                 <h3 class="font-bold text-xl text-blue-900 leading-none">Create Your Profile</h3>
               </div>
               <div class="flex gap-4">
-                <img src="https://images.unsplash.com/photo-1512314889357-e157c22f938d?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 1">
-                <p class="text-sm text-slate-500 leading-relaxed">Sign up and add your emergency contacts (Next of Kin, Trusted Friend). This information is encrypted and private.</p>
+                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                  <i class="ph-bold ph-user-plus text-blue-600 text-3xl"></i>
+                </div>
+                <p class="text-sm text-slate-500 leading-relaxed"><span class="block text-[11px] font-black uppercase tracking-widest text-blue-500 mb-1">Step 1</span>Sign up and add your emergency contacts (Next of Kin, Trusted Friend). This information is encrypted and private.</p>
               </div>
             </div>
 
@@ -668,8 +680,10 @@
                 <h3 class="font-bold text-xl text-blue-900 leading-none">Log Your Stay</h3>
               </div>
               <div class="flex gap-4">
-                <img src="https://images.unsplash.com/photo-1551820842-77bb5df74b5c?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 2">
-                <p class="text-sm text-slate-500 leading-relaxed">Before you check in, log your hotel name, room number, and expected check-out date. Use auto-location for precise GPS data.</p>
+                <div class="w-16 h-16 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center flex-shrink-0">
+                  <i class="ph-bold ph-clipboard-text text-cyan-600 text-3xl"></i>
+                </div>
+                <p class="text-sm text-slate-500 leading-relaxed"><span class="block text-[11px] font-black uppercase tracking-widest text-cyan-600 mb-1">Step 2</span>Before you check in, log your hotel name, room number, and expected check-out date. Use auto-location for precise GPS data.</p>
               </div>
             </div>
 
@@ -679,14 +693,16 @@
                 <h3 class="font-bold text-xl text-blue-900 leading-none">Travel Confidently</h3>
               </div>
               <div class="flex gap-4">
-                <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=200" class="step-img" alt="Step 3">
-                <p class="text-sm text-slate-500 leading-relaxed">Relax knowing there's a secure record of your whereabouts and emergency profile setup for rapid response.</p>
+                <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <i class="ph-bold ph-shield-check text-emerald-600 text-3xl"></i>
+                </div>
+                <p class="text-sm text-slate-500 leading-relaxed"><span class="block text-[11px] font-black uppercase tracking-widest text-emerald-600 mb-1">Step 3</span>Relax knowing there's a secure record of your whereabouts and emergency profile setup for rapid response.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="space-y-6">
+        <div class="space-y-6 reveal-on-scroll">
           <h2 class="text-2xl font-black text-rose-600 text-center">Why We Exist</h2>
           <div class="grid grid-cols-1 gap-4">
             <div class="bg-rose-50 border border-rose-100 p-5 rounded-[2rem]">
@@ -722,12 +738,14 @@
         </div>
 
         <!-- Testimonials -->
-        <div class="space-y-5">
+        <div class="space-y-5 reveal-on-scroll">
           <h2 class="text-2xl font-black text-blue-900 text-center">What Our Users Say</h2>
           <div id="testimonial-card" class="stat-card p-8 border-l-8 border-blue-500 transition-all duration-500">
             <p id="testimonial-quote" class="text-sm text-slate-600 italic leading-relaxed"></p>
             <div class="mt-6 flex items-center gap-4">
-              <img id="testimonial-avatar" src="" class="w-12 h-12 rounded-full border-4 border-blue-50 shadow-md object-cover" alt="User testimonial">
+              <div id="testimonial-avatar" class="w-12 h-12 rounded-full border-4 border-blue-50 shadow-md bg-blue-100 flex items-center justify-center">
+                <i class="ph-bold ph-user-circle text-blue-600 text-2xl"></i>
+              </div>
               <div>
                 <span id="testimonial-name" class="block font-black text-blue-900"></span>
                 <span id="testimonial-role" class="text-[10px] text-blue-400 uppercase font-black tracking-widest"></span>
@@ -765,7 +783,7 @@
           <input type="password" id="auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
                  placeholder="Enter your pin"
                  oninput="this.value=this.value.replace(/\\D/g,'')"
-                 required class="form-input text-center text-2xl tracking-[0.5em]">
+                 required class="form-input">
           <label id="auth-legal-wrap" for="auth-legal-agree" class="flex items-start gap-3 text-xs text-slate-600 leading-relaxed">
             <input id="auth-legal-agree" type="checkbox" class="mt-0.5 w-4 h-4 rounded border border-slate-300 text-blue-700 focus:ring-blue-500">
             <span>I agree to the <a href="#" data-legal-open="terms" class="font-bold text-blue-700 underline">Terms & Conditions</a> and <a href="#" data-legal-open="privacy" class="font-bold text-blue-700 underline">Privacy Statement</a>.</span>
@@ -1309,7 +1327,6 @@
           quote: "\"As a frequent solo business traveler, Meetily is a non-negotiable part of my routine. It gives my family incredible peace of mind. I feel so much safer.\"",
           name: "Jessica S.",
           role: "Consultant",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-blue-500",
           accentClass: "text-blue-400"
         },
@@ -1317,7 +1334,6 @@
           quote: "\"I used this on my backpacking trip. Knowing my parents had a way to trace my steps was comforting. Clean and super intuitive.\"",
           name: "Mike T.",
           role: "Adventurer",
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-cyan-400",
           accentClass: "text-cyan-500"
         },
@@ -1325,7 +1341,6 @@
           quote: "\"The interface is super intuitive. It takes less than 30 seconds to log my stay. A brilliant and much-needed tool.\"",
           name: "Anna C.",
           role: "Digital Nomad",
-          avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-indigo-400",
           accentClass: "text-indigo-500"
         },
@@ -1333,7 +1348,6 @@
           quote: "\"I run a small fashion business and meet new suppliers often. Logging details first has become my ritual for staying protected.\"",
           name: "Amaka O.",
           role: "Business Owner",
-          avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-rose-400",
           accentClass: "text-rose-500"
         },
@@ -1341,7 +1355,6 @@
           quote: "\"My younger sister travels for school events, and Meetily lets us track context if anything goes wrong. It reduces panic.\"",
           name: "Ifeoma E.",
           role: "Guardian",
-          avatar: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-emerald-400",
           accentClass: "text-emerald-500"
         },
@@ -1349,7 +1362,6 @@
           quote: "\"I was skeptical at first, but the package options and quick logging make it practical. It feels like safety with receipts.\"",
           name: "Daniel K.",
           role: "Sales Rep",
-          avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-amber-400",
           accentClass: "text-amber-500"
         },
@@ -1357,7 +1369,6 @@
           quote: "\"Before every first date, I log location and contact data. It takes under a minute and gives me confidence to proceed.\"",
           name: "Temi A.",
           role: "Product Designer",
-          avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-fuchsia-400",
           accentClass: "text-fuchsia-500"
         },
@@ -1365,7 +1376,6 @@
           quote: "\"As a dispatch rider, I meet strangers daily. Meetily helps me create a trail whenever a pickup feels off.\"",
           name: "Uche P.",
           role: "Logistics Rider",
-          avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150",
           borderClass: "border-sky-400",
           accentClass: "text-sky-500"
         },
@@ -2268,7 +2278,18 @@
         quote.innerText = item.quote || '';
         name.innerText = item.name || '';
         role.innerText = item.role || '';
-        avatar.src = item.avatar || '';
+        avatar.classList.remove('bg-blue-100','bg-cyan-100','bg-indigo-100','bg-rose-100','bg-emerald-100','bg-amber-100','bg-fuchsia-100','bg-sky-100');
+        const avatarBg = ({
+          'text-blue-400':'bg-blue-100',
+          'text-cyan-500':'bg-cyan-100',
+          'text-indigo-500':'bg-indigo-100',
+          'text-rose-500':'bg-rose-100',
+          'text-emerald-500':'bg-emerald-100',
+          'text-amber-500':'bg-amber-100',
+          'text-fuchsia-500':'bg-fuchsia-100',
+          'text-sky-500':'bg-sky-100'
+        })[item.accentClass || 'text-blue-400'] || 'bg-blue-100';
+        avatar.classList.add(avatarBg);
 
         dotsRoot.innerHTML = TESTIMONIALS.map((_, i) =>
           `<span class="w-2 h-2 rounded-full ${i === testimonialIndex ? 'bg-blue-500' : 'bg-blue-200'}"></span>`
@@ -2285,6 +2306,23 @@
           }
           updateTestimonial(next);
         }, 5000);
+      }
+
+      function initScrollReveal() {
+        const targets = document.querySelectorAll('#screen-landing .reveal-on-scroll');
+        if (!targets.length) return;
+        if (!('IntersectionObserver' in window)) {
+          targets.forEach((el) => el.classList.add('in-view'));
+          return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in-view');
+            }
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+        targets.forEach((el) => observer.observe(el));
       }
 
       function ensureMapInitialized() {
@@ -3680,6 +3718,7 @@
       updateProfileUserDetails();
       setProfileFormFromUser({});
       refreshPaymentUi();
+      initScrollReveal();
       startLandingHeroRotation();
       startTestimonialsRotation();
       showScreen('screen-landing');
