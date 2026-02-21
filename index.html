@@ -3244,7 +3244,20 @@
       }
 
       // Liveness
+      function setLivenessBusy(isBusy) {
+        const endBtn = document.getElementById('btn-end-meetup');
+        if (endBtn) {
+          endBtn.disabled = !!isBusy;
+          endBtn.classList.toggle('opacity-70', !!isBusy);
+        }
+        const captureBtn = document.getElementById('btn-verify-capture');
+        if (captureBtn) {
+          captureBtn.disabled = !!isBusy;
+        }
+      }
+
       async function startLivenessCheck() {
+        if (livenessSession?.processing) return;
         const modal = document.getElementById('modal-verify');
         const status = document.getElementById('verify-status');
         const stepEl = document.getElementById('verify-step');
@@ -3257,6 +3270,7 @@
           return;
         }
         modal.classList.remove('hidden');
+        setLivenessBusy(true);
         status.style.color = "";
         stepEl.style.color = "";
         livenessStepIndex = 0;
@@ -3277,6 +3291,7 @@
           await ensureFaceModelsLoaded(status);
           status.innerText = "Run liveness steps in front of camera...";
           livenessAutoTimer = setInterval(processLivenessFrame, 220);
+          setLivenessBusy(false);
         } catch (err) {
           const msg = err?.message === "ModelLoadError"
             ? "Liveness models could not load. Check internet and retry."
@@ -3302,6 +3317,7 @@
         }
         status.style.color = "";
         status.innerText = "Comparing images...";
+        setLivenessBusy(true);
         try {
           const liveImage = captureFrame(video, canvas);
           const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
@@ -3312,10 +3328,12 @@
           } else {
             status.innerText = "Face mismatch. Try again.";
             status.style.color = "#ef4444";
+            setLivenessBusy(false);
           }
         } catch (_) {
           status.innerText = "Verification failed. Try again.";
           status.style.color = "#ef4444";
+          setLivenessBusy(false);
         }
       }
 
@@ -3326,6 +3344,7 @@
           livenessAutoTimer = null;
         }
         livenessSession = null;
+        setLivenessBusy(false);
         closeCamera(document.getElementById('webcam'));
       }
 
