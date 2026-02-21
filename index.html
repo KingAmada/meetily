@@ -557,16 +557,18 @@
     </div>
 
     <!-- Global Header -->
-    <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100">
-      <div class="flex items-center gap-2">
+    <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100 relative">
+      <div class="w-20 flex items-center">
         <button id="btn-back" type="button" class="hidden w-8 h-8 rounded-full border border-blue-100 bg-white text-blue-700 flex items-center justify-center" aria-label="Go back">
           <i class="ph-bold ph-caret-left text-sm"></i>
         </button>
+      </div>
+      <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
         <i class="ph-bold ph-shield-check text-cyan-500 text-2xl"></i>
         <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">Meetily</span>
       </div>
-      <div id="user-info-reveal" class="hidden flex items-center gap-3">
-        <span id="header-user-name" class="text-xs font-black text-blue-700 uppercase tracking-widest"></span>
+      <div id="user-info-reveal" class="hidden w-20 flex items-center justify-end gap-2">
+        <span id="header-user-name" class="hidden sm:block max-w-[88px] truncate text-xs font-black text-blue-700 uppercase tracking-widest"></span>
         <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center">
           <i class="ph-bold ph-user text-blue-600"></i>
         </div>
@@ -753,15 +755,15 @@
         </div>
         <form id="auth-form" class="space-y-4">
           <div id="signup-fields">
-            <input type="text" id="auth-name" placeholder="Full Name" class="form-input">
+            <input type="text" id="auth-name" placeholder="Enter full name" class="form-input">
           </div>
-          <input type="tel" id="auth-phone" placeholder="Phone Number" maxlength="11"
+          <input type="tel" id="auth-phone" placeholder="Enter your phone number" maxlength="11"
                  inputmode="numeric"
                  oninput="this.value=this.value.replace(/\\D/g,'')"
                  pattern="[0-9]{11}" minlength="11"
                  required class="form-input">
           <input type="password" id="auth-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
-                 placeholder="4-Digit PIN"
+                 placeholder="Enter your pin"
                  oninput="this.value=this.value.replace(/\\D/g,'')"
                  required class="form-input text-center text-2xl tracking-[0.5em]">
           <label id="auth-legal-wrap" for="auth-legal-agree" class="flex items-start gap-3 text-xs text-slate-600 leading-relaxed">
