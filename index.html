@@ -559,6 +559,9 @@
     <!-- Global Header -->
     <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-[60] border-b border-blue-100">
       <div class="flex items-center gap-2">
+        <button id="btn-back" type="button" class="hidden w-8 h-8 rounded-full border border-blue-100 bg-white text-blue-700 flex items-center justify-center" aria-label="Go back">
+          <i class="ph-bold ph-caret-left text-sm"></i>
+        </button>
         <i class="ph-bold ph-shield-check text-cyan-500 text-2xl"></i>
         <span class="font-extrabold text-xl tracking-tight text-blue-900 uppercase">Meetily</span>
       </div>
@@ -1415,6 +1418,8 @@
       let landingHeroFlipBusy = false;
       let testimonialIndex = Math.floor(Math.random() * TESTIMONIALS.length);
       let testimonialInterval = null;
+      let currentScreenId = "screen-landing";
+      const screenHistory = [];
       const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzboXGuLe0DPfUYiU361naINfQ1h-6SprS83THOPwRVqUMOTQW6MtgSb6dpoDr49omt/exec";
       const PEYGO_API = "https://peygo.net/_functions";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
@@ -2537,27 +2542,45 @@
         return (id === 'screen-landing' || id === 'screen-home');
       }
 
-      function showScreen(id) {
+      function showScreen(id, options = {}) {
+        const noHistory = !!options.noHistory;
+        if (!noHistory && currentScreenId && currentScreenId !== id) {
+          screenHistory.push(currentScreenId);
+          if (screenHistory.length > 20) screenHistory.shift();
+        }
         document.querySelectorAll('.app-screen').forEach(s => s.style.display = 'none');
         const target = document.getElementById(id);
         if (target) {
           target.style.display = 'flex';
           target.scrollTop = 0;
         }
+        currentScreenId = id;
 
         // nav active states
         document.querySelectorAll('.nav-btn-el').forEach(item => item.classList.remove('active'));
         const navHome = document.querySelector('[data-screen="screen-home"]');
         const navProfile = document.querySelector('[data-screen="screen-profile"]');
         const navLog = document.getElementById('nav-log');
+        const backBtn = document.getElementById('btn-back');
 
         if (id === 'screen-home') navHome?.classList.add('active');
         if (id === 'screen-profile') navProfile?.classList.add('active');
         if (id === 'screen-log-form' || id === 'screen-active') navLog?.classList.add('active');
+        if (backBtn) {
+          const canGoBack = screenHistory.length > 0 && id !== 'screen-landing';
+          backBtn.classList.toggle('hidden', !canGoBack);
+        }
 
         // social proof should not annoy / overlap key screens
         if (screenWantsSocialProof(id)) startSocialProof();
         else stopSocialProof();
+      }
+
+      function goBack() {
+        if (!screenHistory.length) return;
+        const prev = screenHistory.pop();
+        if (!prev) return;
+        showScreen(prev, { noHistory: true });
       }
 
       function toggleAuthMode() {
@@ -3266,6 +3289,7 @@
       document.getElementById('btn-landing-signup').onclick = () => openAuth('signup');
       document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
       document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
+      document.getElementById('btn-back').onclick = goBack;
       document.getElementById('auth-legal-agree').onchange = (e) => {
         const legalError = document.getElementById('auth-legal-error');
         if (e.target.checked && legalError) legalError.classList.add('hidden');
