@@ -1487,6 +1487,7 @@
       let isPrelogCaptureBusy = false;
       let paymentPollInterval = null;
       let requiredPaymentPackage = null;
+      let pendingPaymentFingerprint = "";
       let simulatedYellowRatio = 0.12;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
@@ -1571,6 +1572,51 @@
         // Home payment pill removed; keep function as no-op for existing calls.
       }
 
+      function consumedPaymentStorageKey() {
+        const key = phoneKey(signedInUser?.phone || "");
+        return `meetily_consumed_payment_${key || "anon"}`;
+      }
+
+      function getConsumedPaymentFingerprint() {
+        try {
+          return localStorage.getItem(consumedPaymentStorageKey()) || "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function setConsumedPaymentFingerprint(fp) {
+        try {
+          localStorage.setItem(consumedPaymentStorageKey(), String(fp || ""));
+        } catch (_) {
+          // ignore storage failures
+        }
+      }
+
+      function buildPaymentFingerprint(statusResp, normalized) {
+        const rawDate =
+          statusResp?.lastPaymentDate ||
+          statusResp?.last_payment_date ||
+          statusResp?.user?.lastPaymentDate ||
+          statusResp?.user?.last_payment_date ||
+          "";
+        let datePart = "";
+        if (rawDate) {
+          const dt = new Date(rawDate);
+          datePart = Number.isNaN(dt.getTime()) ? String(rawDate) : dt.toISOString();
+        }
+        const totalPart = extractNumber(normalized?.paidTotal);
+        return `${datePart}|${totalPart}`;
+      }
+
+      function hasFreshPayment(statusResp, normalized) {
+        if (!normalized?.isPaid) return false;
+        const fp = buildPaymentFingerprint(statusResp, normalized);
+        if (!fp || fp === "|0") return false;
+        const consumed = getConsumedPaymentFingerprint();
+        return fp !== consumed;
+      }
+
       function syncPackageOptionCards() {
         const selected = document.getElementById('log-package')?.value || "";
         document.querySelectorAll('#package-options .package-pill').forEach((el) => {
@@ -1636,7 +1682,8 @@
           isPaid,
           package: normalizedPackage || "Basic",
           paidTotal: totalPaid,
-          virtualAccountNumber: user?.virtualAccountNumber || resp?.virtualAccountNumber || ""
+          virtualAccountNumber: user?.virtualAccountNumber || resp?.virtualAccountNumber || "",
+          lastPaymentDate: resp?.lastPaymentDate || user?.lastPaymentDate || ""
         };
       }
 
@@ -1809,11 +1856,17 @@
           signedInUser.virtualAccountNumber = normalized.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
+          const fresh = hasFreshPayment(resp, normalized);
           if (signedInUser.isPaid) {
-            if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
-              statusEl.innerText = `Paid total ₦${signedInUser.paidTotal.toLocaleString()}. Current plan ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
+            if (!fresh) {
+              statusEl.innerText = "Previous payment already used for a meetup. Make a new transfer to start another log.";
               return false;
             }
+            if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
+              statusEl.innerText = `Payment seen, but current plan is ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
+              return false;
+            }
+            pendingPaymentFingerprint = buildPaymentFingerprint(resp, normalized);
             stopPaymentPolling();
             statusEl.innerText = `Payment confirmed. Plan: ${signedInUser.package}.`;
             closePaymentModal();
@@ -1874,6 +1927,7 @@
         pendingMeetupData = null;
         preLogImageDataUrl = "";
         requiredPaymentPackage = null;
+        pendingPaymentFingerprint = "";
         unlockedPackage = "Basic";
         signedInUser = { name: "", phone: "", pin: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
         setSessionSyncState(false);
@@ -3141,6 +3195,11 @@
           return;
         }
 
+        if (pendingPaymentFingerprint) {
+          setConsumedPaymentFingerprint(pendingPaymentFingerprint);
+          pendingPaymentFingerprint = "";
+        }
+
         currentActive = {
           start: Date.now(),
           pkg: activePackage,
@@ -3631,7 +3690,8 @@
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
           updateProfileUserDetails();
-          if (!signedInUser.isPaid || !packageCovers(signedInUser.package, selectedPackage)) {
+          const fresh = hasFreshPayment(statusResp, paymentState);
+          if (!signedInUser.isPaid || !fresh || !packageCovers(signedInUser.package, selectedPackage)) {
             const accountNo = await ensureVirtualAccountNumber();
             if (!accountNo) {
               setFieldError(packageSelect, "Could not fetch your virtual account. Sign out and sign in again, then retry.");
@@ -3640,11 +3700,16 @@
               return;
             }
             openPaymentModal(accountNo, selectedPackage);
+            if (!fresh && signedInUser.isPaid) {
+              const statusEl = document.getElementById('payment-status-text');
+              if (statusEl) statusEl.innerText = "Previous payment already consumed. Make a new transfer for this new meetup log.";
+            }
             startPaymentPolling();
             isLogSubmitting = false;
             setButtonLoading(logSubmitBtn, false);
             return;
           }
+          pendingPaymentFingerprint = buildPaymentFingerprint(statusResp, paymentState);
           unlockedPackage = selectedPackage;
         } catch (err) {
           setFieldError(packageSelect, "Could not verify payment. Please try again.");
