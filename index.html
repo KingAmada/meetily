@@ -1971,22 +1971,40 @@
       function resolvePackageAccess(statusResp, normalized, requiredPackage) {
         const required = requiredPackage || "Basic";
         if (!normalized?.isPaid) return { allowed: false, passActive: false, reason: "not_paid" };
-        if (!packageCovers(normalized.package, required)) return { allowed: false, passActive: false, reason: "insufficient_plan" };
+        const latestAmount = extractNumber(
+          normalized?.latestPaymentAmount ||
+          statusResp?.lastPaymentAmount ||
+          statusResp?.last_payment_amount ||
+          statusResp?.user?.lastPaymentAmount ||
+          statusResp?.user?.last_payment_amount
+        );
 
-        const fresh = hasFreshPayment(statusResp, normalized);
-        if (fresh) return { allowed: true, passActive: false, reason: "fresh_payment" };
-
-        if (!isPassPackage(normalized.package)) {
-          return { allowed: false, passActive: false, reason: "consumed_single_use" };
+        if (isPassPackage(required)) {
+          const requiredAmount = extractNumber(PACKAGE_MIN_PAYMENT[required]);
+          if (latestAmount < requiredAmount) {
+            return { allowed: false, passActive: false, reason: "pass_not_qualified" };
+          }
+          const startedAt = parseDateMs(statusPaymentDateRaw(statusResp) || normalized.lastPaymentDate);
+          const duration = PACKAGE_PASS_DURATION_MS[required] || 0;
+          if (!startedAt || !duration) {
+            return { allowed: false, passActive: false, reason: "pass_date_missing" };
+          }
+          const expiresAt = startedAt + duration;
+          const now = Date.now();
+          if (now > expiresAt) {
+            return { allowed: false, passActive: false, reason: "pass_expired", expiresAt };
+          }
+          return { allowed: true, passActive: true, reason: "active_pass", expiresAt };
         }
 
-        const startedAt = parseDateMs(statusPaymentDateRaw(statusResp) || normalized.lastPaymentDate);
-        const duration = PACKAGE_PASS_DURATION_MS[normalized.package] || 0;
-        if (!startedAt || !duration) return { allowed: false, passActive: false, reason: "pass_date_missing" };
-        const expiresAt = startedAt + duration;
-        const now = Date.now();
-        if (now > expiresAt) return { allowed: false, passActive: false, reason: "pass_expired", expiresAt };
-        return { allowed: true, passActive: true, reason: "active_pass", expiresAt };
+        if (!packageCovers(normalized.package, required)) {
+          return { allowed: false, passActive: false, reason: "insufficient_plan" };
+        }
+        const fresh = hasFreshPayment(statusResp, normalized);
+        if (!fresh) {
+          return { allowed: false, passActive: false, reason: "consumed_single_use" };
+        }
+        return { allowed: true, passActive: false, reason: "fresh_payment" };
       }
 
       function normalizePaymentStatus(resp, fallbackPackage) {
@@ -2089,6 +2107,28 @@
           lastErr = new Error(data?.message || "Unable to verify payment");
         }
         throw lastErr || new Error("Unable to verify payment");
+      }
+
+      async function canCreateMeetupServer(selectedPackage) {
+        const res = await fetch(`${PEYGO_API}/apiCanCreateMeetup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: signedInUser?.phone || "",
+            selectedPackage: selectedPackage || "Basic"
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.status === "success" && data?.allowed) {
+          return { allowed: true, data };
+        }
+        return {
+          allowed: false,
+          status: res.status,
+          code: data?.code || "CHECK_FAILED",
+          message: data?.message || "Meetup precheck failed.",
+          data
+        };
       }
 
       function meetupWriteQueueStorageKey() {
@@ -2294,6 +2334,10 @@
             if (!access.allowed) {
               if (access.reason === "insufficient_plan") {
                 statusEl.innerText = `Payment seen, but current plan is ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
+                return false;
+              }
+              if (access.reason === "pass_not_qualified") {
+                statusEl.innerText = `Latest payment does not qualify for ${requiredPaymentPackage || "this pass"}. Make a new transfer.`;
                 return false;
               }
               if (access.reason === "pass_expired") {
@@ -3729,7 +3773,12 @@
           meetupId = String(result?.meetupId || "");
         } catch (err) {
           console.error("Meetup create failed:", err);
-          showUiAlert("Check your connection. We couldn't secure the log.", "error");
+          const msg = String(err?.message || "").trim();
+          if (msg) {
+            showUiAlert(msg, "error");
+          } else {
+            showUiAlert("Check your connection. We couldn't secure the log.", "error");
+          }
           return;
         }
 
@@ -4274,6 +4323,8 @@
               if (statusEl) {
                 if (access.reason === "insufficient_plan") {
                   statusEl.innerText = `Current plan is ${signedInUser.package}; required ${selectedPackage}.`;
+                } else if (access.reason === "pass_not_qualified") {
+                  statusEl.innerText = `Latest payment does not qualify for ${selectedPackage}. Make a new transfer.`;
                 } else if (access.reason === "pass_expired") {
                   statusEl.innerText = "Your Safety Pass has expired. Make a new transfer to continue.";
                 } else {
@@ -4295,6 +4346,38 @@
           setButtonLoading(logSubmitBtn, false);
           return;
         }
+
+        try {
+          const precheck = await canCreateMeetupServer(selectedPackage);
+          if (!precheck.allowed) {
+            if (precheck.code === "ACTIVE_MEETUP_EXISTS" && precheck.data?.meetupId) {
+              await restoreActiveMeetupForUser().catch(() => {});
+              showUiAlert("You already have an active meetup. Continue from Active screen.", "info");
+              showScreen('screen-active');
+              isLogSubmitting = false;
+              setButtonLoading(logSubmitBtn, false);
+              return;
+            }
+            const accountNo = await ensureVirtualAccountNumber();
+            if (accountNo) {
+              openPaymentModal(accountNo, selectedPackage);
+              const statusEl = document.getElementById('payment-status-text');
+              if (statusEl) statusEl.innerText = precheck.message || "Payment required before logging.";
+              startPaymentPolling();
+            } else {
+              setFieldError(packageSelect, precheck.message || "Payment required before logging.");
+            }
+            isLogSubmitting = false;
+            setButtonLoading(logSubmitBtn, false);
+            return;
+          }
+        } catch (_) {
+          setFieldError(packageSelect, "Could not confirm payment eligibility. Please try again.");
+          isLogSubmitting = false;
+          setButtonLoading(logSubmitBtn, false);
+          return;
+        }
+
         setButtonLoading(logSubmitBtn, true, "Saving...");
         try {
           pendingMeetupData = await collectMeetupDataFromForm();
