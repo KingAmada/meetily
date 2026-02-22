@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meetily Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     :root{
       --bg:#f4f7fb;
@@ -87,11 +88,19 @@
       font-size:12px;line-height:1.4;max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;
     }
     .scroll{overflow:auto}
+    .charts-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+    .chart-card{grid-column:span 4;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px}
+    .chart-card h3{margin:0 0 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .chart-wrap{position:relative;height:240px}
     @media (max-width:1080px){
       .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
       .span-8,.span-4,.field,.field.wide{grid-column:span 12}
+      .chart-card{grid-column:span 6}
     }
-    @media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){
+      .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .chart-card{grid-column:span 12}
+    }
   </style>
 </head>
 <body>
@@ -187,6 +196,36 @@
       </article>
 
       <article class="card span-12">
+        <div class="hd"><h2>Analytics Charts</h2><span class="muted">Visual breakdown of users, meetups, and payments</span></div>
+        <div class="bd charts-grid">
+          <div class="chart-card">
+            <h3>Meetup Lifecycle</h3>
+            <div class="chart-wrap"><canvas id="chart-lifecycle"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>User Package Mix</h3>
+            <div class="chart-wrap"><canvas id="chart-packages"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Deposit Totals By Bank</h3>
+            <div class="chart-wrap"><canvas id="chart-banks"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Top User Payments</h3>
+            <div class="chart-wrap"><canvas id="chart-topusers"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Meetups By Package</h3>
+            <div class="chart-wrap"><canvas id="chart-meetup-packages"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Recent Deposit Trend</h3>
+            <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-12">
         <div class="hd"><h2>Deposits Collection</h2><span class="muted">SafeMeetDeposits</span></div>
         <div class="bd scroll">
           <table>
@@ -201,7 +240,7 @@
   </div>
 
   <script>
-    const state = { payload: null, timer: null };
+    const state = { payload: null, timer: null, charts: {} };
     const byId = (id) => document.getElementById(id);
     const money = (n) => `₦${Number(n || 0).toLocaleString()}`;
     const dt = (v) => v ? new Date(v).toLocaleString() : "-";
@@ -324,6 +363,103 @@
       attachRowSelect("deposits-table", deposits || []);
     }
 
+    function countBy(list, keyFn){
+      const out = {};
+      for (const item of list || []) {
+        const k = keyFn(item);
+        out[k] = (out[k] || 0) + 1;
+      }
+      return out;
+    }
+
+    function sumBy(list, keyFn, valFn){
+      const out = {};
+      for (const item of list || []) {
+        const k = keyFn(item);
+        out[k] = (out[k] || 0) + Number(valFn(item) || 0);
+      }
+      return out;
+    }
+
+    function destroyCharts(){
+      Object.values(state.charts).forEach((c) => c?.destroy?.());
+      state.charts = {};
+    }
+
+    function chartColors(n){
+      const palette = ["#2f6fff","#0e9f6e","#d9822b","#d73752","#7f56d9","#0891b2","#dc6803","#4f46e5","#16a34a","#0ea5e9"];
+      const out = [];
+      for (let i = 0; i < n; i += 1) out.push(palette[i % palette.length]);
+      return out;
+    }
+
+    function renderCharts(payload){
+      if (!window.Chart || !payload) return;
+      destroyCharts();
+
+      const meetups = payload.meetups || [];
+      const users = payload.users || [];
+      const deposits = payload.deposits || [];
+
+      const lifecycle = countBy(meetups, (m) => m.lifecycle || "UNKNOWN");
+      const lifecycleLabels = Object.keys(lifecycle);
+      state.charts.lifecycle = new Chart(byId("chart-lifecycle"), {
+        type: "pie",
+        data: { labels: lifecycleLabels, datasets: [{ data: lifecycleLabels.map((k) => lifecycle[k]), backgroundColor: chartColors(lifecycleLabels.length) }] },
+        options: { responsive:true, maintainAspectRatio:false }
+      });
+
+      const pkgUsers = countBy(users, (u) => u.package || "Free");
+      const pkgUserLabels = Object.keys(pkgUsers);
+      state.charts.packages = new Chart(byId("chart-packages"), {
+        type: "doughnut",
+        data: { labels: pkgUserLabels, datasets: [{ data: pkgUserLabels.map((k) => pkgUsers[k]), backgroundColor: chartColors(pkgUserLabels.length) }] },
+        options: { responsive:true, maintainAspectRatio:false }
+      });
+
+      const bankSums = sumBy(deposits, (d) => d.sourceBank || "Unknown", (d) => d.amount || 0);
+      const bankLabels = Object.keys(bankSums).slice(0, 8);
+      state.charts.banks = new Chart(byId("chart-banks"), {
+        type: "bar",
+        data: { labels: bankLabels, datasets: [{ label:"Amount", data: bankLabels.map((k) => bankSums[k]), backgroundColor:"#2f6fff" }] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+      });
+
+      const topUsers = [...users]
+        .sort((a,b) => Number(b.paidTotal || 0) - Number(a.paidTotal || 0))
+        .slice(0, 8);
+      state.charts.topusers = new Chart(byId("chart-topusers"), {
+        type: "bar",
+        data: {
+          labels: topUsers.map((u) => u.phone || "Unknown"),
+          datasets: [{ label:"Paid Total", data: topUsers.map((u) => Number(u.paidTotal || 0)), backgroundColor:"#0e9f6e" }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, indexAxis:"y", scales:{ x:{ beginAtZero:true } } }
+      });
+
+      const meetupPkg = countBy(meetups, (m) => m.selectedPackage || "Unknown");
+      const meetupPkgLabels = Object.keys(meetupPkg).slice(0, 10);
+      state.charts.meetupPackages = new Chart(byId("chart-meetup-packages"), {
+        type: "bar",
+        data: { labels: meetupPkgLabels, datasets: [{ label:"Meetups", data: meetupPkgLabels.map((k) => meetupPkg[k]), backgroundColor:"#d9822b" }] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+      });
+
+      const trendBuckets = {};
+      for (const d of deposits) {
+        const ts = d.timestamp ? new Date(d.timestamp) : null;
+        if (!ts || Number.isNaN(ts.getTime())) continue;
+        const key = `${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,"0")}-${String(ts.getDate()).padStart(2,"0")}`;
+        trendBuckets[key] = (trendBuckets[key] || 0) + Number(d.amount || 0);
+      }
+      const trendLabels = Object.keys(trendBuckets).sort().slice(-14);
+      state.charts.trend = new Chart(byId("chart-trend"), {
+        type: "line",
+        data: { labels: trendLabels, datasets: [{ label:"Deposits", data: trendLabels.map((k)=>trendBuckets[k]), borderColor:"#d73752", backgroundColor:"rgba(215,55,82,.15)", fill:true, tension:.3 }] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+      });
+    }
+
     async function refreshAll(){
       const payload = await fetchCollections();
       if (!payload) return;
@@ -332,6 +468,7 @@
       renderUsers(payload.users || []);
       renderMeetups(payload.meetups || []);
       renderDeposits(payload.deposits || []);
+      renderCharts(payload);
     }
 
     function startAutoRefresh(){
