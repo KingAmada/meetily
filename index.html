@@ -1572,6 +1572,8 @@
       let paymentPollInterval = null;
       let requiredPaymentPackage = null;
       let pendingPaymentFingerprint = "";
+      let pendingPaymentReusable = false;
+      let meetupQueueFlushInterval = null;
       let simulatedYellowRatio = 0.12;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
@@ -1620,6 +1622,12 @@
         "Daily Plus": "passes",
         "Weekly Standard": "passes",
         "Weekly Plus": "passes"
+      };
+      const PACKAGE_PASS_DURATION_MS = {
+        "Daily Standard": 24 * 60 * 60 * 1000,
+        "Daily Plus": 24 * 60 * 60 * 1000,
+        "Weekly Standard": 7 * 24 * 60 * 60 * 1000,
+        "Weekly Plus": 7 * 24 * 60 * 60 * 1000
       };
       const PACKAGE_META = {
         "Basic": "Best for quick logging. Includes stranger details only (no live GPS, no image evidence).",
@@ -1789,19 +1797,14 @@
       }
 
       function buildPaymentFingerprint(statusResp, normalized) {
-        const rawDate =
-          statusResp?.lastPaymentDate ||
-          statusResp?.last_payment_date ||
-          statusResp?.user?.lastPaymentDate ||
-          statusResp?.user?.last_payment_date ||
-          "";
+        const rawDate = statusPaymentDateRaw(statusResp);
         let datePart = "";
         if (rawDate) {
           const dt = new Date(rawDate);
           datePart = Number.isNaN(dt.getTime()) ? String(rawDate) : dt.toISOString();
         }
-        const totalPart = extractNumber(normalized?.paidTotal);
-        return `${datePart}|${totalPart}`;
+        const amountPart = extractNumber(normalized?.latestPaymentAmount || normalized?.paidTotal);
+        return `${datePart}|${amountPart}`;
       }
 
       function hasFreshPayment(statusResp, normalized) {
@@ -1852,6 +1855,10 @@
         return Number.isFinite(n) ? n : 0;
       }
 
+      function isPassPackage(pkg) {
+        return !!PACKAGE_PASS_DURATION_MS[pkg];
+      }
+
       function highestPackageFromAmount(totalPaid) {
         const amount = extractNumber(totalPaid);
         for (const [pkg, minAmount] of PACKAGE_PRICE_ORDER) {
@@ -1862,6 +1869,92 @@
 
       function rankOfPackage(pkg) {
         return PACKAGE_RANK[pkg] || 0;
+      }
+
+      function parseDateMs(value) {
+        if (!value) return 0;
+        const ms = new Date(value).getTime();
+        return Number.isFinite(ms) ? ms : 0;
+      }
+
+      function statusPaymentDateRaw(statusResp) {
+        return (
+          statusResp?.lastPaymentDate ||
+          statusResp?.last_payment_date ||
+          statusResp?.user?.lastPaymentDate ||
+          statusResp?.user?.last_payment_date ||
+          ""
+        );
+      }
+
+      function latestPaymentAmountFromPayload(resp, user, payments) {
+        const directLatest = Math.max(
+          extractNumber(resp?.lastPaymentAmount),
+          extractNumber(resp?.last_payment_amount),
+          extractNumber(user?.lastPaymentAmount),
+          extractNumber(user?.last_payment_amount)
+        );
+        if (directLatest > 0) return directLatest;
+
+        let latestFromListAmount = 0;
+        let latestFromListDate = 0;
+        for (const p of payments) {
+          const dt = parseDateMs(
+            p?.date ||
+            p?.createdAt ||
+            p?.created_at ||
+            p?._createdDate ||
+            p?.paidAt ||
+            p?.paid_at
+          );
+          const amt = Math.max(
+            extractNumber(p?.amount),
+            extractNumber(p?.paidAmount),
+            extractNumber(p?.paid_amount),
+            extractNumber(p?.value),
+            extractNumber(p?.total)
+          );
+          if (!amt) continue;
+          if (dt && dt >= latestFromListDate) {
+            latestFromListDate = dt;
+            latestFromListAmount = amt;
+          } else if (!latestFromListDate && amt > latestFromListAmount) {
+            latestFromListAmount = amt;
+          }
+        }
+        if (latestFromListAmount > 0) return latestFromListAmount;
+
+        return Math.max(
+          extractNumber(resp?.amountPaid),
+          extractNumber(resp?.amount_paid),
+          extractNumber(user?.amountPaid),
+          extractNumber(user?.amount_paid),
+          extractNumber(resp?.totalAmount),
+          extractNumber(resp?.total_amount),
+          extractNumber(user?.totalAmount),
+          extractNumber(user?.total_amount)
+        );
+      }
+
+      function resolvePackageAccess(statusResp, normalized, requiredPackage) {
+        const required = requiredPackage || "Basic";
+        if (!normalized?.isPaid) return { allowed: false, passActive: false, reason: "not_paid" };
+        if (!packageCovers(normalized.package, required)) return { allowed: false, passActive: false, reason: "insufficient_plan" };
+
+        const fresh = hasFreshPayment(statusResp, normalized);
+        if (fresh) return { allowed: true, passActive: false, reason: "fresh_payment" };
+
+        if (!isPassPackage(normalized.package)) {
+          return { allowed: false, passActive: false, reason: "consumed_single_use" };
+        }
+
+        const startedAt = parseDateMs(statusPaymentDateRaw(statusResp) || normalized.lastPaymentDate);
+        const duration = PACKAGE_PASS_DURATION_MS[normalized.package] || 0;
+        if (!startedAt || !duration) return { allowed: false, passActive: false, reason: "pass_date_missing" };
+        const expiresAt = startedAt + duration;
+        const now = Date.now();
+        if (now > expiresAt) return { allowed: false, passActive: false, reason: "pass_expired", expiresAt };
+        return { allowed: true, passActive: true, reason: "active_pass", expiresAt };
       }
 
       function normalizePaymentStatus(resp, fallbackPackage) {
@@ -1884,17 +1977,19 @@
           if (sum > totalPaid) totalPaid = sum;
         }
 
-        const packageFromAmount = highestPackageFromAmount(totalPaid);
+        const latestPaymentAmount = latestPaymentAmountFromPayload(resp, user, payments);
+        const packageFromAmount = highestPackageFromAmount(latestPaymentAmount || totalPaid);
         const packageFromResp = resp?.package || user?.package || fallbackPackage || "Basic";
         const normalizedPackage = rankOfPackage(packageFromAmount) >= rankOfPackage(packageFromResp)
           ? packageFromAmount
           : packageFromResp;
 
-        const isPaid = !!(resp?.isPaid || user?.isPaid || totalPaid >= PACKAGE_MIN_PAYMENT["Basic"]);
+        const isPaid = !!(resp?.isPaid || user?.isPaid || latestPaymentAmount >= PACKAGE_MIN_PAYMENT["Basic"] || totalPaid >= PACKAGE_MIN_PAYMENT["Basic"]);
         return {
           isPaid,
           package: normalizedPackage || "Basic",
           paidTotal: totalPaid,
+          latestPaymentAmount: latestPaymentAmount || 0,
           virtualAccountNumber: user?.virtualAccountNumber || resp?.virtualAccountNumber || "",
           lastPaymentDate: resp?.lastPaymentDate || user?.lastPaymentDate || ""
         };
@@ -1962,6 +2057,89 @@
           lastErr = new Error(data?.message || "Unable to verify payment");
         }
         throw lastErr || new Error("Unable to verify payment");
+      }
+
+      function meetupWriteQueueStorageKey() {
+        const key = phoneKey(signedInUser?.phone || "");
+        return `meetily_meetup_write_queue_${key || "anon"}`;
+      }
+
+      function readMeetupWriteQueue() {
+        try {
+          const raw = localStorage.getItem(meetupWriteQueueStorageKey());
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveMeetupWriteQueue(queue) {
+        try {
+          localStorage.setItem(meetupWriteQueueStorageKey(), JSON.stringify(Array.isArray(queue) ? queue : []));
+        } catch (_) {
+          // ignore storage failures
+        }
+      }
+
+      function enqueueMeetupWrite(payload) {
+        const queue = readMeetupWriteQueue();
+        queue.push(payload);
+        saveMeetupWriteQueue(queue);
+      }
+
+      async function sendMeetupUpdate(payload) {
+        const body = {
+          ...payload,
+          phone: signedInUser?.phone || "",
+          package: currentActive?.pkg || payload?.package || unlockedPackage || "Basic",
+          clientTimestamp: new Date().toISOString()
+        };
+        try {
+          const res = await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) throw new Error(`apiUpdateMeetup failed (${res.status})`);
+          return true;
+        } catch (err) {
+          enqueueMeetupWrite(body);
+          return false;
+        }
+      }
+
+      async function flushMeetupWriteQueue() {
+        const queue = readMeetupWriteQueue();
+        if (!queue.length) return;
+        const pending = [];
+        for (const payload of queue) {
+          try {
+            const res = await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (!res.ok) pending.push(payload);
+          } catch (_) {
+            pending.push(payload);
+          }
+        }
+        saveMeetupWriteQueue(pending);
+      }
+
+      function startMeetupQueueFlusher() {
+        if (meetupQueueFlushInterval) return;
+        meetupQueueFlushInterval = setInterval(() => {
+          flushMeetupWriteQueue().catch(() => {});
+        }, 15000);
+      }
+
+      function stopMeetupQueueFlusher() {
+        if (meetupQueueFlushInterval) {
+          clearInterval(meetupQueueFlushInterval);
+          meetupQueueFlushInterval = null;
+        }
       }
 
       function stopPaymentPolling() {
@@ -2069,17 +2247,22 @@
           signedInUser.virtualAccountNumber = normalized.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
-          const fresh = hasFreshPayment(resp, normalized);
+          const access = resolvePackageAccess(resp, normalized, requiredPaymentPackage || "Basic");
           if (signedInUser.isPaid) {
-            if (!fresh) {
+            if (!access.allowed) {
+              if (access.reason === "insufficient_plan") {
+                statusEl.innerText = `Payment seen, but current plan is ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
+                return false;
+              }
+              if (access.reason === "pass_expired") {
+                statusEl.innerText = "Your Safety Pass has expired. Make a new transfer to continue logging.";
+                return false;
+              }
               statusEl.innerText = "Previous payment already used for a meetup. Make a new transfer to start another log.";
               return false;
             }
-            if (!packageCovers(signedInUser.package, requiredPaymentPackage || "Basic")) {
-              statusEl.innerText = `Payment seen, but current plan is ${signedInUser.package}; required ${requiredPaymentPackage || "Basic"}.`;
-              return false;
-            }
             pendingPaymentFingerprint = buildPaymentFingerprint(resp, normalized);
+            pendingPaymentReusable = isPassPackage(normalized.package);
             stopPaymentPolling();
             statusEl.innerText = `Payment confirmed. Plan: ${signedInUser.package}.`;
             closePaymentModal();
@@ -2118,6 +2301,8 @@
         saveAuthSession();
         updateProfileUserDetails();
         refreshPaymentUi();
+        flushMeetupWriteQueue().catch(() => {});
+        startMeetupQueueFlusher();
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('user-info-reveal').classList.remove('hidden');
         showScreen('screen-home');
@@ -2131,6 +2316,7 @@
       function logout() {
         clearAuthSession();
         stopPaymentPolling();
+        stopMeetupQueueFlusher();
         closePaymentModal();
         closeUpgradeModal();
         closePreLogModal();
@@ -2144,6 +2330,7 @@
         resetLogFeatureSelections();
         requiredPaymentPackage = null;
         pendingPaymentFingerprint = "";
+        pendingPaymentReusable = false;
         unlockedPackage = "Basic";
         signedInUser = { name: "", phone: "", pin: "", isPaid: false, package: "Basic", virtualAccountNumber: "", paidTotal: 0 };
         setSessionSyncState(false);
@@ -3023,19 +3210,11 @@
           status.innerText = `GPS Logged: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
           
           if (currentActive.meetupId) {
-            try {
-              await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  meetupId: currentActive.meetupId,
-                  updateType: "gps",
-                  gpsData: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-                })
-              });
-            } catch (err) {
-              console.error("Meetup GPS update failed:", err);
-            }
+            await sendMeetupUpdate({
+              meetupId: currentActive.meetupId,
+              updateType: "gps",
+              gpsData: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+            });
           }
           
           renderMeetupDetails();
@@ -3413,6 +3592,7 @@
 
       async function beginMeetupAfterCapture() {
         const activePackage = pendingMeetupData?.selectedPackage || unlockedPackage || "Basic";
+        const isPassSession = isPassPackage(activePackage);
         let meetupId = "";
         try {
           const response = await fetch(`${PEYGO_API}/apiCreateMeetup`, {
@@ -3421,6 +3601,10 @@
             body: JSON.stringify({
               phone: signedInUser?.phone || "",
               activePackage: activePackage,
+              selectedPackage: activePackage,
+              packageType: isPassSession ? "pass" : "single",
+              packageWindow: isPassSession ? (activePackage.startsWith("Weekly") ? "weekly" : "daily") : "single_log",
+              packageRank: rankOfPackage(activePackage),
               pendingData: pendingMeetupData || {},
               preLogPhoto: preLogImageDataUrl || ""
             })
@@ -3436,10 +3620,12 @@
           return;
         }
 
-        if (pendingPaymentFingerprint) {
+        const shouldConsumePayment = pendingPaymentFingerprint && !pendingPaymentReusable;
+        if (shouldConsumePayment) {
           setConsumedPaymentFingerprint(pendingPaymentFingerprint);
-          pendingPaymentFingerprint = "";
         }
+        pendingPaymentFingerprint = "";
+        pendingPaymentReusable = false;
 
         currentActive = {
           start: Date.now(),
@@ -3450,6 +3636,7 @@
           details: pendingMeetupData || {},
           updates: []
         };
+        flushMeetupWriteQueue().catch(() => {});
         pendingMeetupData = null;
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
         document.getElementById('no-active-meetup').classList.add('hidden');
@@ -3593,13 +3780,19 @@
         isEndingMeetup = true;
         if (currentActive?.meetupId) {
           try {
-            await fetch(`${PEYGO_API}/apiEndMeetup`, {
+            await sendMeetupUpdate({
+              meetupId: currentActive.meetupId,
+              updateType: "end_requested"
+            });
+            const res = await fetch(`${PEYGO_API}/apiEndMeetup`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ meetupId: currentActive.meetupId, livenessPhoto: "" })
             });
+            if (!res.ok) throw new Error(`apiEndMeetup failed (${res.status})`);
           } catch (err) {
             console.error("Meetup end update failed:", err);
+            showUiAlert("End meetup sync is delayed. We will retry updates automatically.", "info");
           }
         }
         clearInterval(timerInt);
@@ -3793,8 +3986,8 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ phone: phoneInput, pin: pinInput })
             });
-            const loginResp = await loginRes.json();
-            if (loginResp.status !== "success") {
+            const loginResp = await loginRes.json().catch(() => ({}));
+            if (!loginRes.ok || loginResp.status !== "success") {
               setFieldError(document.getElementById('auth-pin'), "Invalid phone or PIN");
               showUiAlert("Invalid phone or PIN", "error");
               return;
@@ -3835,7 +4028,7 @@
         const fpcPriority = priorityEl.value;
         const priorityText = priorityEl.options[priorityEl.selectedIndex].text;
         try {
-          await fetch(`${PEYGO_API}/apiUpdateProfile`, {
+          const profileRes = await fetch(`${PEYGO_API}/apiUpdateProfile`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -3846,6 +4039,7 @@
               fpcPriority
             })
           });
+          if (!profileRes.ok) throw new Error(`apiUpdateProfile failed (${profileRes.status})`);
           document.getElementById('fpc-summary').innerText =
             `${fpcName} (${fpcRelation}) • ${fpcPhone} • ${priorityText}`;
         } catch (err) {
@@ -3874,19 +4068,11 @@
         });
         
         if (currentActive.meetupId) {
-          try {
-            await fetch(`${PEYGO_API}/apiUpdateMeetup`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                meetupId: currentActive.meetupId,
-                updateType: "note",
-                noteData: note
-              })
-            });
-          } catch (err) {
-            console.error("Meetup update write failed:", err);
-          }
+          await sendMeetupUpdate({
+            meetupId: currentActive.meetupId,
+            updateType: "note",
+            noteData: note
+          });
         }
         
         updateInput.value = "";
@@ -3960,8 +4146,8 @@
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
           updateProfileUserDetails();
-          const fresh = hasFreshPayment(statusResp, paymentState);
-          if (!signedInUser.isPaid || !fresh || !packageCovers(signedInUser.package, selectedPackage)) {
+          const access = resolvePackageAccess(statusResp, paymentState, selectedPackage);
+          if (!signedInUser.isPaid || !access.allowed) {
             const accountNo = await ensureVirtualAccountNumber();
             if (!accountNo) {
               setFieldError(packageSelect, "Could not fetch your virtual account. Sign out and sign in again, then retry.");
@@ -3970,9 +4156,17 @@
               return;
             }
             openPaymentModal(accountNo, selectedPackage);
-            if (!fresh && signedInUser.isPaid) {
+            if (signedInUser.isPaid) {
               const statusEl = document.getElementById('payment-status-text');
-              if (statusEl) statusEl.innerText = "Previous payment already consumed. Make a new transfer for this new meetup log.";
+              if (statusEl) {
+                if (access.reason === "insufficient_plan") {
+                  statusEl.innerText = `Current plan is ${signedInUser.package}; required ${selectedPackage}.`;
+                } else if (access.reason === "pass_expired") {
+                  statusEl.innerText = "Your Safety Pass has expired. Make a new transfer to continue.";
+                } else {
+                  statusEl.innerText = "Previous payment already consumed. Make a new transfer for this new meetup log.";
+                }
+              }
             }
             startPaymentPolling();
             isLogSubmitting = false;
@@ -3980,6 +4174,7 @@
             return;
           }
           pendingPaymentFingerprint = buildPaymentFingerprint(statusResp, paymentState);
+          pendingPaymentReusable = isPassPackage(paymentState.package);
           unlockedPackage = selectedPackage;
         } catch (err) {
           setFieldError(packageSelect, "Could not verify payment. Please try again.");
