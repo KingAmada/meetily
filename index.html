@@ -1405,16 +1405,46 @@
         "Sokoto", "Taraba", "Yobe", "Zamfara"
       ];
 
-      let nigeriaData = {
-        "Abia": ["Aba North","Aba South","Umuahia North"],
-        "Adamawa": ["Yola North","Yola South"],
-        "Akwa Ibom": ["Uyo","Eket"],
-        "Anambra": ["Awka South","Onitsha"],
-        "Lagos": ["Ikeja","Alimosho","Lekki","Surulere"],
-        "Kaduna": ["Kaduna North","Kaduna South"],
-        "Borno": ["Maiduguri","Jere"],
-        "Federal Capital Territory": ["AMAC","Bwari"]
+      const NIGERIA_DATA_FALLBACK = {
+        "Abia": ["Aba North", "Aba South", "Umuahia North", "Umuahia South"],
+        "Adamawa": ["Yola North", "Yola South", "Mubi North", "Mubi South"],
+        "Akwa Ibom": ["Uyo", "Eket", "Ikot Ekpene", "Oron"],
+        "Anambra": ["Awka South", "Awka North", "Onitsha North", "Onitsha South", "Nnewi North"],
+        "Bauchi": ["Bauchi", "Katagum", "Misau"],
+        "Bayelsa": ["Yenagoa", "Brass", "Sagbama"],
+        "Benue": ["Makurdi", "Gboko", "Otukpo"],
+        "Borno": ["Maiduguri", "Jere", "Biu"],
+        "Cross River": ["Calabar Municipal", "Calabar South", "Ogoja"],
+        "Delta": ["Warri South", "Warri North", "Ughelli North", "Sapele"],
+        "Ebonyi": ["Abakaliki", "Afikpo North", "Ikwo"],
+        "Edo": ["Oredo", "Egor", "Ikpoba-Okha"],
+        "Ekiti": ["Ado Ekiti", "Ikere", "Irepodun/Ifelodun"],
+        "Enugu": ["Enugu North", "Enugu South", "Nsukka"],
+        "Federal Capital Territory": ["AMAC", "Bwari", "Kuje", "Gwagwalada", "Kwali", "Abaji"],
+        "Gombe": ["Gombe", "Akko", "Yamaltu/Deba"],
+        "Imo": ["Owerri Municipal", "Owerri North", "Owerri West"],
+        "Jigawa": ["Dutse", "Hadejia", "Kazaure"],
+        "Kaduna": ["Kaduna North", "Kaduna South", "Zaria", "Kafanchan"],
+        "Kano": ["Nasarawa", "Fagge", "Dala", "Gwale", "Tarauni", "Ungogo", "Kano Municipal"],
+        "Katsina": ["Katsina", "Daura", "Funtua"],
+        "Kebbi": ["Birnin Kebbi", "Argungu", "Yauri"],
+        "Kogi": ["Lokoja", "Okene", "Idah"],
+        "Kwara": ["Ilorin West", "Ilorin East", "Ilorin South"],
+        "Lagos": ["Ikeja", "Alimosho", "Eti-Osa", "Surulere", "Lagos Island", "Lagos Mainland", "Lekki"],
+        "Nasarawa": ["Lafia", "Keffi", "Karu"],
+        "Niger": ["Minna", "Bida", "Suleja"],
+        "Ogun": ["Abeokuta North", "Abeokuta South", "Ijebu Ode", "Ado-Odo/Ota"],
+        "Ondo": ["Akure South", "Akure North", "Ondo West", "Owo"],
+        "Osun": ["Osogbo", "Ife Central", "Ilesa West"],
+        "Oyo": ["Ibadan North", "Ibadan South-West", "Akinyele", "Ogbomosho North"],
+        "Plateau": ["Jos North", "Jos South", "Barkin Ladi"],
+        "Rivers": ["Port Harcourt", "Obio/Akpor", "Eleme"],
+        "Sokoto": ["Sokoto North", "Sokoto South", "Wamakko"],
+        "Taraba": ["Jalingo", "Wukari", "Bali"],
+        "Yobe": ["Damaturu", "Potiskum", "Gashua"],
+        "Zamfara": ["Gusau", "Talata Mafara", "Kaura Namoda"]
       };
+      let nigeriaData = JSON.parse(JSON.stringify(NIGERIA_DATA_FALLBACK));
 
       const socialProofEvents = [
         "User in Kaduna just verified safely.",
@@ -1569,7 +1599,9 @@
       let isLogSubmitting = false;
       let isPrelogCaptureBusy = false;
       let isEndingMeetup = false;
-      let paymentPollInterval = null;
+      let paymentPollTimeout = null;
+      let paymentPollInFlight = false;
+      let isPaymentPollingActive = false;
       let requiredPaymentPackage = null;
       let pendingPaymentFingerprint = "";
       let pendingPaymentReusable = false;
@@ -2086,6 +2118,7 @@
         const queue = readMeetupWriteQueue();
         queue.push(payload);
         saveMeetupWriteQueue(queue);
+        startMeetupQueueFlusher();
       }
 
       async function sendMeetupUpdate(payload) {
@@ -2111,7 +2144,10 @@
 
       async function flushMeetupWriteQueue() {
         const queue = readMeetupWriteQueue();
-        if (!queue.length) return;
+        if (!queue.length) {
+          stopMeetupQueueFlusher();
+          return;
+        }
         const pending = [];
         for (const payload of queue) {
           try {
@@ -2126,10 +2162,14 @@
           }
         }
         saveMeetupWriteQueue(pending);
+        if (!pending.length) {
+          stopMeetupQueueFlusher();
+        }
       }
 
       function startMeetupQueueFlusher() {
         if (meetupQueueFlushInterval) return;
+        if (!readMeetupWriteQueue().length) return;
         meetupQueueFlushInterval = setInterval(() => {
           flushMeetupWriteQueue().catch(() => {});
         }, 15000);
@@ -2143,8 +2183,10 @@
       }
 
       function stopPaymentPolling() {
-        if (paymentPollInterval) clearInterval(paymentPollInterval);
-        paymentPollInterval = null;
+        isPaymentPollingActive = false;
+        paymentPollInFlight = false;
+        if (paymentPollTimeout) clearTimeout(paymentPollTimeout);
+        paymentPollTimeout = null;
       }
 
       function closePaymentModal() {
@@ -2278,9 +2320,31 @@
         }
       }
 
+      function schedulePaymentPoll(delayMs = 5000) {
+        if (!isPaymentPollingActive) return;
+        if (paymentPollTimeout) clearTimeout(paymentPollTimeout);
+        paymentPollTimeout = setTimeout(async () => {
+          if (!isPaymentPollingActive) return;
+          if (paymentPollInFlight) {
+            schedulePaymentPoll(5000);
+            return;
+          }
+          paymentPollInFlight = true;
+          const paid = await verifyPaymentNow().catch(() => false);
+          paymentPollInFlight = false;
+          if (!isPaymentPollingActive) return;
+          if (paid) {
+            stopPaymentPolling();
+            return;
+          }
+          schedulePaymentPoll(5000);
+        }, Math.max(0, delayMs));
+      }
+
       function startPaymentPolling() {
         stopPaymentPolling();
-        paymentPollInterval = setInterval(verifyPaymentNow, 5000);
+        isPaymentPollingActive = true;
+        schedulePaymentPoll(0);
       }
 
       function setSessionSyncState(syncing) {
@@ -2302,7 +2366,7 @@
         updateProfileUserDetails();
         refreshPaymentUi();
         flushMeetupWriteQueue().catch(() => {});
-        startMeetupQueueFlusher();
+        if (readMeetupWriteQueue().length) startMeetupQueueFlusher();
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('user-info-reveal').classList.remove('hidden');
         showScreen('screen-home');
@@ -2488,8 +2552,39 @@
         });
       }
 
+      async function loadImageFromDataUrl(dataUrl) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+      }
+
+      async function compressImageFileToDataUrl(file, { maxWidth = 800, quality = 0.6 } = {}) {
+        const rawDataUrl = await fileToDataUrl(file);
+        const img = await loadImageFromDataUrl(rawDataUrl);
+        const ratio = img.width > maxWidth ? (maxWidth / img.width) : 1;
+        const width = Math.max(1, Math.round(img.width * ratio));
+        const height = Math.max(1, Math.round(img.height * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', quality);
+      }
+
       async function filesToDataUrls(files) {
-        return Promise.all(files.map((f) => fileToDataUrl(f)));
+        return Promise.all(files.map(async (f) => {
+          const isImage = String(f?.type || "").startsWith("image/");
+          if (!isImage) return fileToDataUrl(f);
+          try {
+            return await compressImageFileToDataUrl(f, { maxWidth: 800, quality: 0.6 });
+          } catch (_) {
+            return fileToDataUrl(f);
+          }
+        }));
       }
 
       function removeFieldError(input) {
@@ -2637,6 +2732,9 @@
       }
 
       async function loadNigeriaData() {
+        // Keep local fallback as primary guarantee, then try to enrich from remote sources.
+        nigeriaData = mergeNigeriaDataWithStateList(NIGERIA_DATA_FALLBACK);
+        populateStateOptions();
         const sources = [
           "https://raw.githubusercontent.com/afeibukun/nigerian-state-lgas-wards-polling-units/refs/heads/main/states-and-lgas.json",
           "https://raw.githubusercontent.com/kennymartins/nigerian-states-LGAs/master/states-and-lgas.json",
@@ -2649,7 +2747,7 @@
             const payload = await res.json();
             const normalized = normalizeNigeriaPayload(payload);
             if (Object.keys(normalized).length > 0) {
-              nigeriaData = mergeNigeriaDataWithStateList(normalized);
+              nigeriaData = mergeNigeriaDataWithStateList({ ...nigeriaData, ...normalized });
               populateStateOptions();
               return;
             }
@@ -3162,9 +3260,22 @@
       };
 
       async function getCurrentGPS() {
-        return new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+        const tryPosition = (opts) => new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, opts);
         });
+        try {
+          return await tryPosition({
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+          });
+        } catch (_) {
+          return tryPosition({
+            enableHighAccuracy: false,
+            timeout: 15000,
+            maximumAge: 60000
+          });
+        }
       }
 
       async function activateGPS() {
@@ -3351,6 +3462,8 @@
         if (faceModelsLoaded) return;
         if (!window.faceapi) throw new Error("Face API not available");
         const modelSources = [
+          "./models/face-api",
+          "/models/face-api",
           "https://justadudewhohacks.github.io/face-api.js/models"
         ];
         let loaded = false;
