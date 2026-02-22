@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetily Admin Dashboard</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffffcc;
+      --line:#dfe7f3;
+      --text:#0f1f38;
+      --muted:#5f7394;
+      --blue:#2f6fff;
+      --good:#0e9f6e;
+      --warn:#d9822b;
+      --bad:#d73752;
+      --glass-shadow:0 18px 46px rgba(28,57,106,.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:"Avenir Next","SF Pro Display","Segoe UI",sans-serif;
+      background:
+        radial-gradient(1200px 580px at -12% -10%, #dbe9ff 0%, rgba(219,233,255,0) 60%),
+        radial-gradient(980px 540px at 110% 0%, #d8f7ff 0%, rgba(216,247,255,0) 58%),
+        var(--bg);
+    }
+    .shell{max-width:1360px;margin:0 auto;padding:18px;display:grid;gap:14px}
+    .card{
+      border:1px solid var(--line);
+      background:var(--card);
+      backdrop-filter:blur(14px);
+      border-radius:16px;
+      box-shadow:var(--glass-shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      background:#ffffff99;
+      display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    }
+    .hd h1,.hd h2{margin:0}
+    .hd h1{font-size:19px}
+    .hd h2{font-size:14px}
+    .muted{color:var(--muted);font-size:12px}
+    .bd{padding:14px;display:grid;gap:10px}
+    .row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:end}
+    .field{grid-column:span 3;display:grid;gap:5px}
+    .field.wide{grid-column:span 6}
+    .field.full{grid-column:span 12}
+    .field label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .input,.select,.btn{
+      height:38px;border:1px solid var(--line);border-radius:10px;
+      background:#fff;color:var(--text);font-size:13px;padding:0 11px;outline:none;
+    }
+    .btn{cursor:pointer;font-weight:700;background:#f8fbff}
+    .btn:hover{background:#edf4ff}
+    .btn.primary{background:linear-gradient(135deg,#3b78ff,#2f6fff);color:#fff;border-color:#2f6fff}
+    .status{
+      display:inline-flex;align-items:center;gap:6px;
+      font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--muted)
+    }
+    .dot{width:8px;height:8px;border-radius:999px;background:#9fb0c8}
+    .ok .dot{background:var(--good)}
+    .warn .dot{background:var(--warn)}
+    .bad .dot{background:var(--bad)}
+    .kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+    .kpi{border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px 12px}
+    .kpi .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi .value{font-size:20px;font-weight:800;margin-top:4px}
+    .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+    .span-12{grid-column:span 12}
+    .span-8{grid-column:span 8}
+    .span-4{grid-column:span 4}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    tr:hover td{background:#f8fbff}
+    .pill{font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid #d6e0f1}
+    .pill.good{color:var(--good)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)}
+    .link{color:var(--blue);text-decoration:none}
+    pre{
+      margin:0;border:1px solid var(--line);border-radius:10px;background:#f8fbff;padding:10px;
+      font-size:12px;line-height:1.4;max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    }
+    .scroll{overflow:auto}
+    @media (max-width:1080px){
+      .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .span-8,.span-4,.field,.field.wide{grid-column:span 12}
+    }
+    @media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="card">
+      <div class="hd">
+        <div>
+          <h1>Meetily Admin Dashboard</h1>
+          <div class="muted">All users, payments, meetup locations, ended meetups, and overdue 48-hour watch sessions.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="api-base" class="input" value="https://peygo.net/_functions" aria-label="API base">
+          <input id="admin-key" class="input" placeholder="Admin key" aria-label="Admin key">
+          <select id="auto-refresh" class="select" aria-label="Auto refresh">
+            <option value="0">Manual</option>
+            <option value="15">Auto 15s</option>
+            <option value="30" selected>Auto 30s</option>
+            <option value="60">Auto 60s</option>
+          </select>
+          <button id="btn-fetch" class="btn primary">Fetch All Collections</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="row">
+          <div class="field"><label>Users Limit</label><input id="limit-users" class="input" value="500"></div>
+          <div class="field"><label>Meetups Limit</label><input id="limit-logs" class="input" value="1000"></div>
+          <div class="field"><label>Deposits Limit</label><input id="limit-deposits" class="input" value="1500"></div>
+          <div class="field"><label>Meetup Lifecycle Filter</label>
+            <select id="meetup-filter" class="select">
+              <option value="ALL">All</option>
+              <option value="ACTIVE">Active</option>
+              <option value="OVERDUE_48H">Overdue 48h</option>
+              <option value="ENDED_BY_USER">Ended by user</option>
+            </select>
+          </div>
+          <div class="field"><label>User Package Filter</label>
+            <select id="user-package-filter" class="select">
+              <option value="ALL">All</option>
+              <option value="Basic">Basic</option>
+              <option value="Standard">Standard</option>
+              <option value="Confidence Plus">Confidence Plus</option>
+              <option value="Daily Standard">Daily Standard</option>
+              <option value="Daily Plus">Daily Plus</option>
+              <option value="Weekly Standard">Weekly Standard</option>
+              <option value="Weekly Plus">Weekly Plus</option>
+              <option value="Free">Free</option>
+            </select>
+          </div>
+          <div class="field"><label>Status</label><span id="fetch-status" class="status"><span class="dot"></span>Idle</span></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="label">Users</div><div id="kpi-users" class="value">0</div></div>
+          <div class="kpi"><div class="label">Paid Users</div><div id="kpi-paid" class="value">0</div></div>
+          <div class="kpi"><div class="label">Meetups</div><div id="kpi-meetups" class="value">0</div></div>
+          <div class="kpi"><div class="label">Active</div><div id="kpi-active" class="value">0</div></div>
+          <div class="kpi"><div class="label">Overdue 48h</div><div id="kpi-overdue" class="value">0</div></div>
+          <div class="kpi"><div class="label">Ended</div><div id="kpi-ended" class="value">0</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card span-8">
+        <div class="hd"><h2>Users Collection</h2><span class="muted">SafeMeetUsers</span></div>
+        <div class="bd scroll">
+          <table>
+            <thead>
+              <tr><th>Phone</th><th>Name</th><th>Paid</th><th>Package</th><th>Total Paid</th><th>Last Payment</th><th>FPC</th></tr>
+            </thead>
+            <tbody id="users-table"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card span-4">
+        <div class="hd"><h2>Selected Record</h2><span class="muted">Raw JSON</span></div>
+        <div class="bd"><pre id="selected-json">{}</pre></div>
+      </article>
+
+      <article class="card span-12">
+        <div class="hd"><h2>Meetups Collection</h2><span class="muted">SafeMeetLogs (with lifecycle)</span></div>
+        <div class="bd scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Created</th><th>Phone</th><th>Status</th><th>Lifecycle</th><th>Package</th>
+                <th>Payment</th><th>Location</th><th>GPS</th><th>Expires</th><th>Ended</th>
+              </tr>
+            </thead>
+            <tbody id="meetups-table"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <div class="hd"><h2>Deposits Collection</h2><span class="muted">SafeMeetDeposits</span></div>
+        <div class="bd scroll">
+          <table>
+            <thead>
+              <tr><th>Timestamp</th><th>TxId</th><th>Virtual Account</th><th>Amount</th><th>Sender</th><th>Bank</th></tr>
+            </thead>
+            <tbody id="deposits-table"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const state = { payload: null, timer: null };
+    const byId = (id) => document.getElementById(id);
+    const money = (n) => `₦${Number(n || 0).toLocaleString()}`;
+    const dt = (v) => v ? new Date(v).toLocaleString() : "-";
+
+    function setStatus(kind, text){
+      const el = byId("fetch-status");
+      el.classList.remove("ok","warn","bad");
+      if (kind) el.classList.add(kind);
+      el.innerHTML = `<span class="dot"></span>${text}`;
+    }
+
+    function baseUrl(){ return (byId("api-base").value || "").replace(/\/+$/, ""); }
+    function adminKey(){ return (byId("admin-key").value || "").trim(); }
+
+    async function fetchCollections(){
+      const qs = new URLSearchParams({
+        usersLimit: byId("limit-users").value || "500",
+        logsLimit: byId("limit-logs").value || "1000",
+        depositsLimit: byId("limit-deposits").value || "1500"
+      });
+      if (adminKey()) qs.set("adminKey", adminKey());
+      const url = `${baseUrl()}/apiAdminMeetilyCollections?${qs.toString()}`;
+
+      setStatus("warn", "Fetching...");
+      const res = await fetch(url, { method: "GET", headers: { "Content-Type":"application/json" } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.status !== "success") {
+        setStatus("bad", data?.message || `Failed (${res.status})`);
+        return null;
+      }
+      setStatus("ok", `Fetched ${data?.fetchedAt || "now"}`);
+      return data;
+    }
+
+    function lifecyclePill(v){
+      if (v === "ACTIVE") return `<span class="pill good">ACTIVE</span>`;
+      if (v === "OVERDUE_48H") return `<span class="pill bad">OVERDUE_48H</span>`;
+      if (v === "ENDED_BY_USER") return `<span class="pill warn">ENDED</span>`;
+      return `<span class="pill">${v || "-"}</span>`;
+    }
+
+    function gpsLink(lastGps){
+      const raw = String(lastGps || "");
+      const p = raw.split(",").map((x) => Number(x.trim()));
+      if (p.length !== 2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) return "-";
+      const lat = p[0].toFixed(6), lng = p[1].toFixed(6);
+      return `<a class="link" target="_blank" rel="noopener noreferrer" href="https://maps.google.com/?q=${lat},${lng}">${lat},${lng}</a>`;
+    }
+
+    function renderKpis(summary){
+      byId("kpi-users").innerText = String(summary?.usersTotal || 0);
+      byId("kpi-paid").innerText = String(summary?.paidUsers || 0);
+      byId("kpi-meetups").innerText = String(summary?.meetupsTotal || 0);
+      byId("kpi-active").innerText = String(summary?.activeMeetups || 0);
+      byId("kpi-overdue").innerText = String(summary?.overdueMeetups48h || 0);
+      byId("kpi-ended").innerText = String(summary?.endedMeetups || 0);
+    }
+
+    function attachRowSelect(tableId, list){
+      const tbody = byId(tableId);
+      tbody.querySelectorAll("tr").forEach((tr) => {
+        tr.addEventListener("click", () => {
+          const idx = Number(tr.getAttribute("data-i"));
+          byId("selected-json").innerText = JSON.stringify(list[idx] || {}, null, 2);
+        });
+      });
+    }
+
+    function renderUsers(users){
+      const pkg = byId("user-package-filter").value;
+      const filtered = (users || []).filter((u) => pkg === "ALL" || String(u.package || "") === pkg);
+      const tbody = byId("users-table");
+      tbody.innerHTML = filtered.map((u,i) => `
+        <tr data-i="${i}">
+          <td>${u.phone || "-"}</td>
+          <td>${u.fullName || "-"}</td>
+          <td>${u.isPaid ? '<span class="pill good">PAID</span>' : '<span class="pill bad">UNPAID</span>'}</td>
+          <td>${u.package || "-"}</td>
+          <td>${money(u.paidTotal)}</td>
+          <td>${dt(u.lastPaymentDate)}</td>
+          <td>${u.fpcName ? `${u.fpcName} (${u.fpcPhone || "-"})` : "-"}</td>
+        </tr>
+      `).join("");
+      attachRowSelect("users-table", filtered);
+    }
+
+    function renderMeetups(meetups){
+      const filter = byId("meetup-filter").value;
+      const filtered = (meetups || []).filter((m) => filter === "ALL" || m.lifecycle === filter);
+      const tbody = byId("meetups-table");
+      tbody.innerHTML = filtered.map((m,i) => `
+        <tr data-i="${i}">
+          <td>${dt(m.createdAt)}</td>
+          <td>${m.userPhone || "-"}</td>
+          <td>${m.status || "-"}</td>
+          <td>${lifecyclePill(m.lifecycle)}</td>
+          <td>${m.selectedPackage || "-"}</td>
+          <td>${money(m.paymentAmount)}<br><span class="muted">${m.paymentTxId || "-"}</span></td>
+          <td>${m.address || "-"}</td>
+          <td>${gpsLink(m.lastGps)}</td>
+          <td>${dt(m.expiresAt)}</td>
+          <td>${dt(m.endedAt)}</td>
+        </tr>
+      `).join("");
+      attachRowSelect("meetups-table", filtered);
+    }
+
+    function renderDeposits(deposits){
+      const tbody = byId("deposits-table");
+      tbody.innerHTML = (deposits || []).map((d,i) => `
+        <tr data-i="${i}">
+          <td>${dt(d.timestamp)}</td>
+          <td>${d.transactionId || "-"}</td>
+          <td>${d.virtualAccountNumber || "-"}</td>
+          <td>${money(d.amount)}</td>
+          <td>${d.senderName || "-"}</td>
+          <td>${d.sourceBank || "-"}</td>
+        </tr>
+      `).join("");
+      attachRowSelect("deposits-table", deposits || []);
+    }
+
+    async function refreshAll(){
+      const payload = await fetchCollections();
+      if (!payload) return;
+      state.payload = payload;
+      renderKpis(payload.summary || {});
+      renderUsers(payload.users || []);
+      renderMeetups(payload.meetups || []);
+      renderDeposits(payload.deposits || []);
+    }
+
+    function startAutoRefresh(){
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+      const sec = Number(byId("auto-refresh").value || 0);
+      if (sec > 0) state.timer = setInterval(() => { refreshAll().catch(() => {}); }, sec * 1000);
+    }
+
+    byId("btn-fetch").onclick = () => refreshAll().catch((e) => setStatus("bad", e?.message || "Failed"));
+    byId("auto-refresh").onchange = startAutoRefresh;
+    byId("meetup-filter").onchange = () => renderMeetups(state.payload?.meetups || []);
+    byId("user-package-filter").onchange = () => renderUsers(state.payload?.users || []);
+
+    startAutoRefresh();
+    refreshAll().catch(() => {});
+  </script>
+</body>
+</html>
