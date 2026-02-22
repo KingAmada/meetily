@@ -2329,6 +2329,25 @@
           signedInUser.virtualAccountNumber = normalized.virtualAccountNumber || signedInUser.virtualAccountNumber || "";
           unlockedPackage = signedInUser.package;
           refreshPaymentUi();
+          if (requiredPaymentPackage) {
+            const serverCheck = await canCreateMeetupServer(requiredPaymentPackage);
+            if (!serverCheck.allowed) {
+              if (serverCheck.code === "ACTIVE_MEETUP_EXISTS") {
+                statusEl.innerText = "You already have an active meetup. Continue from Active screen.";
+                stopPaymentPolling();
+                return false;
+              }
+              statusEl.innerText = serverCheck.message || "Payment not eligible yet for selected package.";
+              return false;
+            }
+            pendingPaymentFingerprint = buildPaymentFingerprint(resp, normalized);
+            pendingPaymentReusable = isPassPackage(requiredPaymentPackage || normalized.package);
+            stopPaymentPolling();
+            statusEl.innerText = `Payment confirmed. Plan: ${requiredPaymentPackage}.`;
+            closePaymentModal();
+            requiredPaymentPackage = null;
+            return true;
+          }
           const access = resolvePackageAccess(resp, normalized, requiredPaymentPackage || "Basic");
           if (signedInUser.isPaid) {
             if (!access.allowed) {
