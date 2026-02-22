@@ -1531,6 +1531,7 @@
       let confirmResolver = null;
       let isSyncingSession = false;
       const PEYGO_API = "https://peygo.net/_functions";
+      const AUTH_SESSION_KEY = "meetily_auth_session_v1";
       const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
       const PACKAGE_META = {
         "Basic": "Best for quick logging. Includes stranger details only (no live GPS, no image evidence).",
@@ -1592,6 +1593,86 @@
 
       function refreshPaymentUi() {
         // Home payment pill removed; keep function as no-op for existing calls.
+      }
+
+      function saveAuthSession() {
+        try {
+          const payload = {
+            user: {
+              name: signedInUser?.name || "",
+              phone: signedInUser?.phone || "",
+              pin: signedInUser?.pin || "",
+              isPaid: !!signedInUser?.isPaid,
+              package: signedInUser?.package || "Basic",
+              virtualAccountNumber: signedInUser?.virtualAccountNumber || "",
+              paidTotal: extractNumber(signedInUser?.paidTotal)
+            },
+            unlockedPackage: unlockedPackage || "Basic",
+            savedAt: new Date().toISOString()
+          };
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(payload));
+        } catch (_) {
+          // ignore storage failures
+        }
+      }
+
+      function clearAuthSession() {
+        try {
+          localStorage.removeItem(AUTH_SESSION_KEY);
+        } catch (_) {
+          // ignore storage failures
+        }
+      }
+
+      function readAuthSession() {
+        try {
+          const raw = localStorage.getItem(AUTH_SESSION_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (_) {
+          return null;
+        }
+      }
+
+      async function restoreSavedSession() {
+        const session = readAuthSession();
+        if (!session?.user) return false;
+        const sUser = session.user;
+        const phone = normalizePhone(sUser.phone || "");
+        const pin = normalizePin(sUser.pin || "");
+        if (!phone || !pin) {
+          clearAuthSession();
+          return false;
+        }
+        try {
+          const loginRes = await fetch(`${PEYGO_API}/apiSafeMeetLogin`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone, pin })
+          });
+          const loginResp = await loginRes.json().catch(() => ({}));
+          if (!loginRes.ok || loginResp.status !== "success") {
+            clearAuthSession();
+            return false;
+          }
+          const loginUser = loginResp?.user || {};
+          signedInUser = {
+            name: loginUser?.name || sUser.name || "User",
+            phone: loginUser?.phone || phone,
+            pin: pin,
+            isPaid: loginUser?.isPaid || false,
+            package: loginUser?.package || "Basic",
+            virtualAccountNumber: loginUser?.virtualAccountNumber || "",
+            paidTotal: loginUser?.paidTotal || 0
+          };
+          unlockedPackage = signedInUser.package || session.unlockedPackage || "Basic";
+          setProfileFormFromUser(loginUser);
+          finalizeSigninUi();
+          return true;
+        } catch (_) {
+          clearAuthSession();
+          return false;
+        }
       }
 
       function consumedPaymentStorageKey() {
@@ -1924,6 +2005,7 @@
       }
 
       function finalizeSigninUi() {
+        saveAuthSession();
         updateProfileUserDetails();
         refreshPaymentUi();
         document.getElementById('app-nav').classList.remove('hidden');
@@ -1937,6 +2019,7 @@
       }
 
       function logout() {
+        clearAuthSession();
         stopPaymentPolling();
         closePaymentModal();
         closeUpgradeModal();
@@ -3823,8 +3906,12 @@
       initScrollReveal();
       startLandingHeroRotation();
       startTestimonialsRotation();
-      showScreen('screen-landing');
       startSocialProof();
+      restoreSavedSession()
+        .then((restored) => {
+          if (!restored) showScreen('screen-landing');
+        })
+        .catch(() => showScreen('screen-landing'));
       window.addEventListener('beforeunload', stopPaymentPolling);
     });
   </script>
