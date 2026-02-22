@@ -315,7 +315,34 @@
       background-size:220% 100%;
       animation:shimmer 4s linear infinite;
     }
+    .package-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .package-tab{
+      border-radius:999px;
+      border:1px solid rgba(30,58,138,.15);
+      background:#fff;
+      color:#1e3a8a;
+      padding:8px 10px;
+      text-align:center;
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:all .2s ease;
+    }
+    .package-tab.active{
+      border-color:#1d4ed8;
+      background:#dbeafe;
+      color:#1e3a8a;
+      box-shadow:0 10px 20px -16px rgba(29,78,216,.85);
+    }
+    .package-panels{display:grid;gap:8px;margin-top:8px;}
+    .package-panel{display:none;}
+    .package-panel.active{display:block;}
     .package-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    .package-choices.passes{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+    .package-choices.passes .package-pill{padding:7px 4px;border-radius:10px;}
+    .package-choices.passes .package-pill .name{font-size:8px;letter-spacing:.04em;}
+    .package-choices.passes .package-pill .price{font-size:11px;}
     .package-pill{
       border-radius:12px;
       border:1px solid rgba(30,58,138,.18);
@@ -958,25 +985,53 @@
             <label class="block text-xs font-black text-blue-900 uppercase tracking-widest">Select Package *</label>
             <input type="hidden" id="log-package" required>
             <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Payment is verified at log submission.</p>
-            <div id="package-options" class="package-choices mt-2">
-              <button type="button" class="package-pill" data-package="Basic">
-                <p class="name">Basic</p>
-                <p class="price">N500</p>
-              </button>
-              <button type="button" class="package-pill" data-package="Standard">
-                <p class="name">Standard</p>
-                <p class="price">N1,000</p>
-              </button>
-              <button type="button" class="package-pill" data-package="Confidence Plus">
-                <p class="name">C Plus</p>
-                <p class="price">N2,500</p>
-              </button>
+            <div id="package-tabs" class="package-tabs mt-2">
+              <button type="button" class="package-tab active" data-tab="single">Single Log</button>
+              <button type="button" class="package-tab" data-tab="passes">Safety Passes</button>
+            </div>
+            <div id="package-options" class="package-panels">
+              <div class="package-panel active" data-tab="single">
+                <div class="package-choices">
+                  <button type="button" class="package-pill" data-package="Basic">
+                    <p class="name">Basic</p>
+                    <p class="price">N500</p>
+                  </button>
+                  <button type="button" class="package-pill" data-package="Standard">
+                    <p class="name">Standard</p>
+                    <p class="price">N1,000</p>
+                  </button>
+                  <button type="button" class="package-pill" data-package="Confidence Plus">
+                    <p class="name">C Plus</p>
+                    <p class="price">N2,500</p>
+                  </button>
+                </div>
+              </div>
+              <div class="package-panel" data-tab="passes">
+                <div class="package-choices passes">
+                  <button type="button" class="package-pill" data-package="Daily Standard">
+                    <p class="name">Daily Standard</p>
+                    <p class="price">N3,000</p>
+                  </button>
+                  <button type="button" class="package-pill" data-package="Daily Plus">
+                    <p class="name">Daily Plus</p>
+                    <p class="price">N5,000</p>
+                  </button>
+                  <button type="button" class="package-pill" data-package="Weekly Standard">
+                    <p class="name">Weekly Standard</p>
+                    <p class="price">N10,000</p>
+                  </button>
+                  <button type="button" class="package-pill" data-package="Weekly Plus">
+                    <p class="name">Weekly Plus</p>
+                    <p class="price">N12,000</p>
+                  </button>
+                </div>
+              </div>
             </div>
             <div id="package-detail" class="package-detail">Select a package to preview what it includes.</div>
           </div>
 
           <div class="space-y-4">
-            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Enter the Stranger</h3>
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Enter the Stranger Details</h3>
             <div class="grid grid-cols-2 gap-4">
               <input type="text" id="fname" placeholder="First Name (Optional)" class="form-input">
               <input type="text" id="lname" placeholder="Last Name (Optional)" class="form-input">
@@ -1157,9 +1212,8 @@
             <div class="rounded-2xl border border-blue-100 p-4 bg-white">
               <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Packages</p>
               <ul class="mt-2 text-xs text-slate-600 space-y-1">
-                <li><span class="font-black text-blue-900">Basic (₦500):</span> Just log basic stranger details</li>
-                <li><span class="font-black text-blue-900">Standard (₦1,000):</span> Basic + GPS</li>
-                <li><span class="font-black text-blue-900">Confidence Plus (₦2,500):</span> Basic + GPS + Pictures</li>
+                <li><span class="font-black text-blue-900">Single Log:</span> Basic (₦500), Standard (₦1,000), Confidence Plus (₦2,500)</li>
+                <li><span class="font-black text-blue-900">Safety Passes:</span> Daily Standard (₦3,000), Daily Plus (₦5,000), Weekly Standard (₦10,000), Weekly Plus (₦12,000)</li>
               </ul>
             </div>
           </div>
@@ -1266,7 +1320,7 @@
               <p><strong>4) User Responsibilities (Critical)</strong><br>You agree to provide accurate information, keep your phone number/device/PIN secure, check in and end sessions promptly, and contact emergency services directly when in immediate danger. You are solely responsible for your decisions, meetups, destinations, and interactions.</p>
               <p><strong>5) Emergency Contacts ("FPC") & Consent</strong><br>You agree that you have notified your FPC and obtained consent to be contacted by MEETILY, will not list someone who has not consented, and are responsible for accurate contact details. You authorize MEETILY to contact your FPC based on your preferences and activity status.</p>
               <p><strong>6) Escalation & Authority Notifications</strong><br>If you do not verify/close your safety watch within the configured timeframe (e.g., 48 hours), MEETILY may notify your FPC and/or generate/transmit a report or alert packet to relevant authorities or third parties, subject to operational availability and local law. Authorities may not respond, may respond late, or may require further verification.</p>
-              <p><strong>7) Packages, Paid Features & Payment Rules</strong><br>MEETILY may offer tiered packages (e.g., Basic, Standard, Confidence Plus) with different feature access. Fees (including bank transfer-based payments) may be required. Verification may be automated or manual, and access may be delayed if payment cannot be verified. You may not reverse payments after consuming paid features, except where required by law.</p>
+              <p><strong>7) Packages, Paid Features & Payment Rules</strong><br>MEETILY may offer tiered packages (e.g., Basic, Standard, Confidence Plus, Daily Standard, Daily Plus, Weekly Standard, Weekly Plus) with different feature access. Fees (including bank transfer-based payments) may be required. Verification may be automated or manual, and access may be delayed if payment cannot be verified. You may not reverse payments after consuming paid features, except where required by law.</p>
               <p><strong>8) Refunds</strong><br>Unless required by law, payments are non-refundable once a paid feature is unlocked or a paid-tier session starts. Any refund we choose to issue is at our sole discretion and may require identity verification.</p>
               <p><strong>9) Location, GPS & Media Upload Consent</strong><br>If you enable GPS, upload images, or provide identifying details about others ("Strangers"), you confirm you have lawful authority to share such information. Do not upload illegal content, intimate images without consent, privacy-violating content, threats, harassment, or false accusations.</p>
               <p><strong>10) Biometric / Face Verification (If Enabled)</strong><br>MEETILY may use camera-based verification ("liveness", face capture) to reduce abuse and confirm legitimate session closure. You consent to camera access where enabled; some security features may be unavailable otherwise.</p>
@@ -1299,7 +1353,7 @@
             <div class="p-5 max-h-[75vh] overflow-y-auto text-sm text-slate-700 space-y-4 leading-relaxed">
               <p><strong>Effective Date:</strong> [Insert date]<br>This Privacy Statement explains how Amada Technologies LTD (RC: 7569270) collects, uses, stores, shares, and protects personal data in MEETILY.</p>
               <p><strong>1) Data We Collect</strong><br><strong>A) Account & Profile Data:</strong> Full name (optional by signup flow), phone number, PIN (stored securely/hashed where possible), emergency contact/FPC details (name, phone, relationship, priority settings).</p>
-              <p><strong>B) Meetup Log Data (User-Entered):</strong> Stranger details (names/phones/notes), meetup address/state/LGA/place type, session timestamps/status, package selected (Basic/Standard/Confidence Plus).</p>
+              <p><strong>B) Meetup Log Data (User-Entered):</strong> Stranger details (names/phones/notes), meetup address/state/LGA/place type, session timestamps/status, package selected (Basic/Standard/Confidence Plus/Daily Standard/Daily Plus/Weekly Standard/Weekly Plus).</p>
               <p><strong>C) Location Data (If Enabled):</strong> GPS coordinates during active sessions.</p>
               <p><strong>D) Images & Media (If Uploaded):</strong> Stranger image, supporting images, optional pre-log face capture/end-meetup verification.</p>
               <p><strong>E) Device & Technical Data:</strong> Basic device identifiers, browser/app telemetry, IP address, timestamps, diagnostics, and fraud signals where available.</p>
@@ -1479,7 +1533,15 @@
       // Basic = details only
       // Standard = + GPS
       // Confidence Plus = + GPS + pictures
-      const PACKAGE_RANK = { "Basic": 1, "Standard": 2, "Confidence Plus": 3 };
+      const PACKAGE_RANK = {
+        "Basic": 1,
+        "Standard": 2,
+        "Daily Standard": 2,
+        "Weekly Standard": 2,
+        "Confidence Plus": 3,
+        "Daily Plus": 3,
+        "Weekly Plus": 3
+      };
 
       let unlockedPackage = "Basic"; // start Basic (change after "I've Paid")
       let pendingUpgradeTarget = null;
@@ -1532,11 +1594,41 @@
       let isSyncingSession = false;
       const PEYGO_API = "https://peygo.net/_functions";
       const AUTH_SESSION_KEY = "meetily_auth_session_v1";
-      const PACKAGE_MIN_PAYMENT = { "Basic": 500, "Standard": 1000, "Confidence Plus": 2500 };
+      const PACKAGE_MIN_PAYMENT = {
+        "Basic": 500,
+        "Standard": 1000,
+        "Confidence Plus": 2500,
+        "Daily Standard": 3000,
+        "Daily Plus": 5000,
+        "Weekly Standard": 10000,
+        "Weekly Plus": 12000
+      };
+      const PACKAGE_PRICE_ORDER = [
+        ["Weekly Plus", 12000],
+        ["Weekly Standard", 10000],
+        ["Daily Plus", 5000],
+        ["Daily Standard", 3000],
+        ["Confidence Plus", 2500],
+        ["Standard", 1000],
+        ["Basic", 500]
+      ];
+      const PACKAGE_TAB_MAP = {
+        "Basic": "single",
+        "Standard": "single",
+        "Confidence Plus": "single",
+        "Daily Standard": "passes",
+        "Daily Plus": "passes",
+        "Weekly Standard": "passes",
+        "Weekly Plus": "passes"
+      };
       const PACKAGE_META = {
         "Basic": "Best for quick logging. Includes stranger details only (no live GPS, no image evidence).",
         "Standard": "Adds live GPS tracking during your active meetup. Recommended for most users.",
-        "Confidence Plus": "Full safety mode: live GPS + image evidence uploads for stronger records."
+        "Confidence Plus": "Full safety mode: live GPS + image evidence uploads for stronger records.",
+        "Daily Standard": "Unlimited Standard logs for one day (GPS-enabled logs all day).",
+        "Daily Plus": "Unlimited Plus logs for one day (GPS + image evidence all day).",
+        "Weekly Standard": "Unlimited Standard logs for one week (best for frequent, GPS-based meetups).",
+        "Weekly Plus": "Unlimited Plus logs for one week (full coverage with GPS + image evidence)."
       };
 
       const stateSel = document.getElementById('state-select');
@@ -1725,8 +1817,26 @@
         document.querySelectorAll('#package-options .package-pill').forEach((el) => {
           el.classList.toggle('active', el.dataset.package === selected);
         });
+        const activeTab = PACKAGE_TAB_MAP[selected] || "single";
+        document.querySelectorAll('#package-tabs .package-tab').forEach((el) => {
+          el.classList.toggle('active', el.dataset.tab === activeTab);
+        });
+        document.querySelectorAll('#package-options .package-panel').forEach((el) => {
+          el.classList.toggle('active', el.dataset.tab === activeTab);
+        });
         const detail = document.getElementById('package-detail');
         if (detail) detail.innerText = PACKAGE_META[selected] || "Select a package to preview what it includes.";
+      }
+
+      function switchPackageTab(tab) {
+        const panel = document.querySelector(`#package-options .package-panel[data-tab="${tab}"]`);
+        if (!panel) return;
+        const firstPkg = panel.querySelector('.package-pill');
+        if (firstPkg?.dataset?.package) {
+          setSelectedPackage(firstPkg.dataset.package);
+          return;
+        }
+        syncPackageOptionCards();
       }
 
       function setSelectedPackage(pkg) {
@@ -1744,9 +1854,9 @@
 
       function highestPackageFromAmount(totalPaid) {
         const amount = extractNumber(totalPaid);
-        if (amount >= PACKAGE_MIN_PAYMENT["Confidence Plus"]) return "Confidence Plus";
-        if (amount >= PACKAGE_MIN_PAYMENT["Standard"]) return "Standard";
-        if (amount >= PACKAGE_MIN_PAYMENT["Basic"]) return "Basic";
+        for (const [pkg, minAmount] of PACKAGE_PRICE_ORDER) {
+          if (amount >= minAmount) return pkg;
+        }
         return "Basic";
       }
 
@@ -3584,6 +3694,9 @@
 
       document.querySelectorAll('#package-options .package-pill').forEach((btn) => {
         btn.onclick = () => setSelectedPackage(btn.dataset.package || "");
+      });
+      document.querySelectorAll('#package-tabs .package-tab').forEach((btn) => {
+        btn.onclick = () => switchPackageTab(btn.dataset.tab || "single");
       });
       document.getElementById('log-package').onchange = syncPackageOptionCards;
       syncPackageOptionCards();
