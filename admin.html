@@ -118,7 +118,7 @@
         <div class="row">
           <div class="field"><label>Users Limit</label><input id="limit-users" class="input" value="500"></div>
           <div class="field"><label>Meetups Limit</label><input id="limit-logs" class="input" value="1000"></div>
-          <div class="field"><label>Deposits Limit</label><input id="limit-deposits" class="input" value="1500"></div>
+          <div class="field"><label>Deposits Limit</label><input id="limit-deposits" class="input" value="1000"></div>
           <div class="field"><label>Meetup Lifecycle Filter</label>
             <select id="meetup-filter" class="select">
               <option value="ALL">All</option>
@@ -220,7 +220,7 @@
       const qs = new URLSearchParams({
         usersLimit: byId("limit-users").value || "500",
         logsLimit: byId("limit-logs").value || "1000",
-        depositsLimit: byId("limit-deposits").value || "1500"
+        depositsLimit: byId("limit-deposits").value || "1000"
       });
       if (adminKey()) qs.set("adminKey", adminKey());
       const url = `${baseUrl()}/apiAdminMeetilyCollections?${qs.toString()}`;
