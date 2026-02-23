@@ -1100,6 +1100,14 @@
             <textarea id="info-extra" placeholder="Additional Details (Optional)" rows="2" class="form-input"></textarea>
           </div>
 
+          <label class="flex items-start gap-3 text-xs text-slate-600 border border-blue-100 rounded-2xl p-4 bg-blue-50/50">
+            <input id="face-match-enabled" type="checkbox" checked class="mt-0.5 accent-blue-600">
+            <span>
+              <span class="font-black text-blue-900 uppercase tracking-wider text-[10px] block">Enable Face Match</span>
+              Capture face before start and compare at end. Turn off to use liveness-only verification.
+            </span>
+          </label>
+
           <button id="btn-log-submit" type="submit" class="w-full btn-primary font-black py-5 rounded-2xl shadow-2xl uppercase tracking-widest">
             Start 48h Safety Watch
           </button>
@@ -1255,7 +1263,7 @@
         <div class="w-full max-w-sm text-center space-y-10">
           <div class="space-y-2">
             <h2 class="text-3xl font-black text-blue-900">Security Check</h2>
-            <p class="text-sm text-slate-500">Complete facial expression steps first, then capture for comparison.</p>
+            <p class="text-sm text-slate-500">Complete facial expression steps first, then capture to verify and close safely.</p>
           </div>
           <div class="w-72 h-72 mx-auto bg-slate-100 rounded-full border-8 border-blue-50 overflow-hidden relative shadow-[0_20px_50px_rgba(14,165,233,0.3)]">
             <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
@@ -1605,8 +1613,10 @@
       let requiredPaymentPackage = null;
       let pendingPaymentFingerprint = "";
       let pendingPaymentReusable = false;
+      let pendingAutoStartAfterPayment = false;
       let meetupQueueFlushInterval = null;
       let simulatedYellowRatio = 0.12;
+      let pendingLivenessPhoto = "";
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -1901,6 +1911,10 @@
 
       function rankOfPackage(pkg) {
         return PACKAGE_RANK[pkg] || 0;
+      }
+
+      function gpsAllowedForPackage(pkg) {
+        return rankOfPackage(pkg) >= rankOfPackage("Standard");
       }
 
       function parseDateMs(value) {
@@ -2346,6 +2360,13 @@
             statusEl.innerText = `Payment confirmed. Plan: ${requiredPaymentPackage}.`;
             closePaymentModal();
             requiredPaymentPackage = null;
+            if (pendingAutoStartAfterPayment) {
+              pendingAutoStartAfterPayment = false;
+              setTimeout(() => {
+                const form = document.getElementById('log-form');
+                if (form) form.requestSubmit();
+              }, 0);
+            }
             return true;
           }
           const access = resolvePackageAccess(resp, normalized, requiredPaymentPackage || "Basic");
@@ -2372,6 +2393,13 @@
             statusEl.innerText = `Payment confirmed. Plan: ${signedInUser.package}.`;
             closePaymentModal();
             requiredPaymentPackage = null;
+            if (pendingAutoStartAfterPayment) {
+              pendingAutoStartAfterPayment = false;
+              setTimeout(() => {
+                const form = document.getElementById('log-form');
+                if (form) form.requestSubmit();
+              }, 0);
+            }
             return true;
           }
           statusEl.innerText = "Not paid yet. We will keep checking every 5 seconds.";
@@ -2563,6 +2591,7 @@
             pkg: latest.selectedPackage || signedInUser.package || "Basic",
             meetupId: latest._id,
             preLogPhoto: latest.preLogPhoto || "",
+            requireFaceMatch: latest.faceMatchEnabled !== false,
             gpsLogs: [],
             updates: [],
             details: {
@@ -2575,7 +2604,7 @@
             }
           };
 
-          if (latest.lastGps) {
+          if (gpsAllowedForPackage(currentActive.pkg) && latest.lastGps) {
             const parts = latest.lastGps.split(",");
             currentActive.gpsLogs.push({
               reason: "restored_last_gps",
@@ -2600,6 +2629,9 @@
           renderActiveMeetupHomeCard();
           renderMeetupDetails();
           startTimer();
+          if (gpsAllowedForPackage(currentActive.pkg)) {
+            startGPSLogging();
+          }
           
         } catch (err) {
           console.error("Failed to restore meetup:", err);
@@ -3367,6 +3399,7 @@
 
       async function logGPSPoint(reason) {
         if (!currentActive) return;
+        if (!gpsAllowedForPackage(currentActive.pkg)) return;
         try {
           const pos = await getCurrentGPS();
           const { latitude, longitude } = pos.coords;
@@ -3404,6 +3437,7 @@
       }
 
       function startGPSLogging() {
+        if (!currentActive || !gpsAllowedForPackage(currentActive.pkg)) return;
         clearInterval(gpsLogInterval);
         logGPSPoint("start");
         gpsLogInterval = setInterval(() => {
@@ -3433,6 +3467,7 @@
           state: document.getElementById('state-select').value,
           lga: document.getElementById('lga-select').value,
           extra: document.getElementById('info-extra').value.trim(),
+          faceMatchEnabled: !!document.getElementById('face-match-enabled')?.checked,
           strangerImageDataUrls,
           supportImageDataUrls,
           dynamicFields
@@ -3470,7 +3505,7 @@
               </div>
             </div>`;
         }
-        if (Array.isArray(currentActive.gpsLogs) && currentActive.gpsLogs.length) {
+        if (gpsAllowedForPackage(currentActive.pkg) && Array.isArray(currentActive.gpsLogs) && currentActive.gpsLogs.length) {
           const lastGPS = [...currentActive.gpsLogs].reverse().find((g) => g.latitude && g.longitude);
           detailsEl.innerHTML += `
             <div class="pt-2 space-y-1">
@@ -3661,6 +3696,8 @@
         const supportName = document.getElementById('fn-img-support');
         if (strangerName) strangerName.innerText = "";
         if (supportName) supportName.innerText = "";
+        const faceMatchToggle = document.getElementById('face-match-enabled');
+        if (faceMatchToggle) faceMatchToggle.checked = true;
       }
 
       async function getCameraPermission() {
@@ -3813,10 +3850,12 @@
           pkg: activePackage,
           meetupId: meetupId,
           preLogPhoto: preLogImageDataUrl,
+          requireFaceMatch: !!pendingMeetupData?.faceMatchEnabled,
           gpsLogs: [],
           details: pendingMeetupData || {},
           updates: []
         };
+        pendingLivenessPhoto = "";
         flushMeetupWriteQueue().catch(() => {});
         pendingMeetupData = null;
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
@@ -3826,7 +3865,9 @@
         renderActiveMeetupHomeCard();
         renderMeetupDetails();
         startTimer();
-        startGPSLogging();
+        if (gpsAllowedForPackage(activePackage)) {
+          startGPSLogging();
+        }
         showScreen('screen-home');
       }
 
@@ -3850,13 +3891,6 @@
         const status = document.getElementById('verify-status');
         const stepEl = document.getElementById('verify-step');
         const video = document.getElementById('webcam');
-        if (!currentActive?.preLogPhoto) {
-          const proceed = await askUiConfirm("Pre-log photo is missing for this restored session. End meetup without liveness?");
-          if (proceed) {
-            await endMeetup();
-          }
-          return;
-        }
         modal.classList.remove('hidden');
         setLivenessBusy(true);
         status.style.color = "";
@@ -3873,6 +3907,9 @@
           rightDone: false,
           processing: false
         };
+        if (currentActive?.requireFaceMatch && !currentActive?.preLogPhoto) {
+          status.innerText = "Pre-log face missing. Running liveness-only.";
+        }
 
         try {
           await openCamera(video);
@@ -3905,12 +3942,19 @@
           return;
         }
         status.style.color = "";
-        status.innerText = "Comparing images...";
+        status.innerText = "Capturing proof...";
         setLivenessBusy(true);
         try {
           const liveImage = captureFrame(video, canvas);
-          const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
-          if (score >= 0.60) {
+          pendingLivenessPhoto = liveImage;
+          const shouldCompare = !!(currentActive?.requireFaceMatch && currentActive?.preLogPhoto);
+          let matchPassed = true;
+          if (shouldCompare) {
+            status.innerText = "Comparing images...";
+            const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
+            matchPassed = score >= 0.60;
+          }
+          if (matchPassed) {
             isEndingMeetup = true;
             document.getElementById('btn-verify-capture').classList.add('hidden');
             const cancelBtn = document.getElementById('btn-cancel-verify');
@@ -3918,7 +3962,7 @@
               cancelBtn.disabled = true;
               cancelBtn.classList.add('opacity-60');
             }
-            status.innerText = "Liveness confirmed. Finalizing...";
+            status.innerText = shouldCompare ? "Liveness + face match confirmed. Finalizing..." : "Liveness confirmed. Finalizing...";
             status.style.color = "#10b981";
             await new Promise((resolve) => setTimeout(resolve, 350));
             await endMeetup();
@@ -3954,6 +3998,7 @@
           cancelBtn.disabled = false;
           cancelBtn.classList.remove('opacity-60');
         }
+        pendingLivenessPhoto = "";
         closeCamera(document.getElementById('webcam'));
       }
 
@@ -3968,7 +4013,7 @@
             const res = await fetch(`${PEYGO_API}/apiEndMeetup`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ meetupId: currentActive.meetupId, livenessPhoto: "" })
+              body: JSON.stringify({ meetupId: currentActive.meetupId, livenessPhoto: pendingLivenessPhoto || "" })
             });
             if (!res.ok) throw new Error(`apiEndMeetup failed (${res.status})`);
           } catch (err) {
@@ -3982,6 +4027,7 @@
         resetLogFeatureSelections();
         currentActive = null;
         preLogImageDataUrl = "";
+        pendingLivenessPhoto = "";
         closeVerifyModal();
         renderMeetupDetails();
 
@@ -4117,10 +4163,12 @@
           return;
         }
         closeUpgradeModal();
+        pendingAutoStartAfterPayment = false;
         openPaymentModal(accountNo, pendingUpgradeTarget || "Basic");
         startPaymentPolling();
       };
       document.getElementById('btn-payment-close').onclick = () => {
+        pendingAutoStartAfterPayment = false;
         stopPaymentPolling();
         closePaymentModal();
       };
@@ -4285,9 +4333,10 @@
       };
       document.getElementById('btn-cancel-prelog').onclick = closePreLogModal;
 
-      // Log form submit => capture photo first, then start watch
+      // Log form submit => start watch (with optional pre-log face capture)
       document.getElementById('log-form').onsubmit = async (e) => {
         e.preventDefault();
+        pendingAutoStartAfterPayment = false;
         if (isSyncingSession) {
           showUiAlert("Syncing your last meetup session. Please wait...", "info");
           return;
@@ -4337,6 +4386,7 @@
               return;
             }
             openPaymentModal(accountNo, selectedPackage);
+            pendingAutoStartAfterPayment = true;
             if (signedInUser.isPaid) {
               const statusEl = document.getElementById('payment-status-text');
               if (statusEl) {
@@ -4380,6 +4430,7 @@
             const accountNo = await ensureVirtualAccountNumber();
             if (accountNo) {
               openPaymentModal(accountNo, selectedPackage);
+              pendingAutoStartAfterPayment = true;
               const statusEl = document.getElementById('payment-status-text');
               if (statusEl) statusEl.innerText = precheck.message || "Payment required before logging.";
               startPaymentPolling();
@@ -4400,7 +4451,12 @@
         setButtonLoading(logSubmitBtn, true, "Saving...");
         try {
           pendingMeetupData = await collectMeetupDataFromForm();
-          await openPreLogModal();
+          preLogImageDataUrl = "";
+          if (pendingMeetupData.faceMatchEnabled) {
+            await openPreLogModal();
+          } else {
+            await beginMeetupAfterCapture();
+          }
         } finally {
           isLogSubmitting = false;
           setButtonLoading(logSubmitBtn, false);
