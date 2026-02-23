@@ -3909,11 +3909,33 @@
       }
 
       async function loadImageElement(src) {
+        const normalizeWixMediaUrl = (value) => {
+          const raw = String(value || "").trim();
+          if (!raw) return "";
+          if (/^https?:\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
+            return raw;
+          }
+          if (raw.startsWith("wix:image://")) {
+            try {
+              const noScheme = raw.replace(/^wix:image:\/\/v1\//, "");
+              const [pathPart] = noScheme.split("#");
+              const [mediaId, ...rest] = pathPart.split("/");
+              if (!mediaId) return raw;
+              const filename = rest.join("/") || "image.jpg";
+              return `https://static.wixstatic.com/media/${mediaId}/${filename}`;
+            } catch (_) {
+              return raw;
+            }
+          }
+          return raw;
+        };
+
         return new Promise((resolve, reject) => {
           const img = new Image();
+          img.crossOrigin = "anonymous";
           img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = src;
+          img.onerror = () => reject(new Error(`Image failed to load: ${String(src).slice(0, 120)}`));
+          img.src = normalizeWixMediaUrl(src);
         });
       }
 
@@ -4162,7 +4184,11 @@
             status.style.color = "#ef4444";
             setLivenessBusy(false);
           }
-        } catch (_) {
+        } catch (err) {
+          console.error("captureAndVerifyLiveness failed:", err, {
+            preLogPhoto: currentActive?.preLogPhoto,
+            requireFaceMatch: currentActive?.requireFaceMatch
+          });
           status.innerText = "Verification failed. Try again.";
           status.style.color = "#ef4444";
           isEndingMeetup = false;
