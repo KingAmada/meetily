@@ -3912,17 +3912,27 @@
         const normalizeWixMediaUrl = (value) => {
           const raw = String(value || "").trim();
           if (!raw) return "";
-          if (/^https?:\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
-            return raw;
+          if (raw.startsWith("data:") || raw.startsWith("blob:")) return raw;
+          if (/^https?:\/\//i.test(raw)) {
+            try {
+              const parsed = new URL(raw);
+              if (parsed.hostname.toLowerCase() === "static.wixstatic.com" && parsed.pathname.startsWith("/media/")) {
+                const mediaPath = parsed.pathname.replace(/^\/media\//, "");
+                const mediaId = mediaPath.split("/").filter(Boolean)[0] || "";
+                if (mediaId) return `https://static.wixstatic.com/media/${mediaId}`;
+              }
+              return raw;
+            } catch (_) {
+              return raw;
+            }
           }
           if (raw.startsWith("wix:image://")) {
             try {
               const noScheme = raw.replace(/^wix:image:\/\/v1\//, "");
               const [pathPart] = noScheme.split("#");
-              const [mediaId, ...rest] = pathPart.split("/");
+              const [mediaId] = pathPart.split("/");
               if (!mediaId) return raw;
-              const filename = rest.join("/") || "image.jpg";
-              return `https://static.wixstatic.com/media/${mediaId}/${filename}`;
+              return `https://static.wixstatic.com/media/${mediaId}`;
             } catch (_) {
               return raw;
             }
