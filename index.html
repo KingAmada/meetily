@@ -1030,6 +1030,26 @@
             <div id="package-detail" class="package-detail">Select a package to preview what it includes.</div>
           </div>
 
+          <div class="space-y-3 border border-blue-100 bg-blue-50/40 rounded-2xl p-4">
+            <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Meetup Time Window</h3>
+            <select id="meetup-duration-select" class="form-input">
+              <option value="">Use default (2 hours)</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+              <option value="240">4 hours</option>
+              <option value="1440">24 hours</option>
+              <option value="custom">Custom</option>
+            </select>
+            <input id="meetup-duration-custom" type="number" min="15" max="2880" step="5" class="form-input hidden" placeholder="Custom duration in minutes (15 - 2880)">
+            <select id="meetup-grace-select" class="form-input">
+              <option value="10">Grace period: 10 minutes</option>
+              <option value="20" selected>Grace period: 20 minutes</option>
+              <option value="30">Grace period: 30 minutes</option>
+            </select>
+            <p class="text-[11px] text-slate-500">If you do not check out by your selected time, we send reminders first, then trigger emergency flow after grace period.</p>
+          </div>
+
           <div class="space-y-4">
             <h3 class="text-xs font-black text-blue-400 uppercase tracking-widest">Enter the Stranger Details</h3>
             <div class="grid grid-cols-2 gap-4">
@@ -1109,7 +1129,7 @@
           </label>
 
           <button id="btn-log-submit" type="submit" class="w-full btn-primary font-black py-5 rounded-2xl shadow-2xl uppercase tracking-widest">
-            Start 48h Safety Watch
+            Start Safety Watch
           </button>
         </form>
       </div>
@@ -1168,7 +1188,8 @@
       <div id="screen-active" class="app-screen p-6 space-y-8">
         <div class="text-center space-y-4 pt-12">
           <p class="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Guardian Watch Active</p>
-          <h1 id="timer" class="text-7xl font-black tracking-tighter text-blue-900 tabular-nums">48:00:00</h1>
+          <h1 id="timer" class="text-7xl font-black tracking-tighter text-blue-900 tabular-nums">02:00:00</h1>
+          <p id="timer-stage-text" class="text-xs font-black text-slate-500 uppercase tracking-[0.15em]">Time left to check out</p>
           <div class="w-48 h-2 bg-blue-50 mx-auto rounded-full overflow-hidden">
             <div class="h-full bg-blue-600 w-full animate-pulse"></div>
           </div>
@@ -1177,6 +1198,9 @@
         <div class="space-y-4 pt-10">
           <button id="btn-end-meetup" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl">
             Verify to End Meetup
+          </button>
+          <button id="btn-extend-meetup" type="button" class="w-full bg-amber-500 text-white py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl">
+            Extend Meetup +1 Hour
           </button>
 
           <div class="stat-card p-6 border-t-4 border-blue-500">
@@ -1587,7 +1611,10 @@
       let currentActive = null;
       let timerInt = null;
       let gpsLogInterval = null;
-      const SCREEN_DURATION = 48 * 60 * 60 * 1000;
+      const DEFAULT_MEETUP_DURATION_MINUTES = 120;
+      const DEFAULT_GRACE_MINUTES = 20;
+      const SECONDARY_WELFARE_HOURS = 48;
+      const REMINDER_LEAD_MS = 10 * 60 * 1000;
       const GPS_LOG_INTERVAL_MS = 10 * 60 * 1000;
       let preLogImageDataUrl = "";
       let pendingMeetupData = null;
@@ -1617,6 +1644,9 @@
       let meetupQueueFlushInterval = null;
       let simulatedYellowRatio = 0.12;
       let pendingLivenessPhoto = "";
+      let reminderLeadSent = false;
+      let reminderDeadlineSent = false;
+      let emergencyTriggered = false;
       const LIVENESS_STEPS = [
         "Smile clearly at the camera",
         "Turn your face slightly left",
@@ -1924,6 +1954,34 @@
         if (!value) return 0;
         const ms = new Date(value).getTime();
         return Number.isFinite(ms) ? ms : 0;
+      }
+
+      function parseMeetupDurationMinutes() {
+        const select = document.getElementById('meetup-duration-select');
+        const custom = document.getElementById('meetup-duration-custom');
+        const selected = String(select?.value || "").trim();
+        if (selected === "custom") {
+          const n = Number(custom?.value || 0);
+          if (Number.isFinite(n) && n >= 15 && n <= 2880) return Math.round(n);
+          return DEFAULT_MEETUP_DURATION_MINUTES;
+        }
+        const n = Number(selected || DEFAULT_MEETUP_DURATION_MINUTES);
+        if (Number.isFinite(n) && n >= 15 && n <= 2880) return Math.round(n);
+        return DEFAULT_MEETUP_DURATION_MINUTES;
+      }
+
+      function parseGraceMinutes() {
+        const grace = Number(document.getElementById('meetup-grace-select')?.value || DEFAULT_GRACE_MINUTES);
+        if (Number.isFinite(grace) && grace >= 10 && grace <= 30) return Math.round(grace);
+        return DEFAULT_GRACE_MINUTES;
+      }
+
+      function formatCountdown(ms) {
+        const safe = Math.max(0, Math.floor(ms));
+        const h = Math.floor(safe / 3600000);
+        const m = Math.floor((safe % 3600000) / 60000);
+        const s = Math.floor((safe % 60000) / 1000);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
       }
 
       function statusPaymentDateRaw(statusResp) {
@@ -2483,6 +2541,9 @@
         timerInt = null;
         stopGPSLogging();
         currentActive = null;
+        reminderLeadSent = false;
+        reminderDeadlineSent = false;
+        emergencyTriggered = false;
         pendingMeetupData = null;
         preLogImageDataUrl = "";
         resetLogFeatureSelections();
@@ -2496,6 +2557,10 @@
         document.getElementById('user-info-reveal').classList.add('hidden');
         document.getElementById('active-meetup-card-home').classList.add('hidden');
         document.getElementById('no-active-meetup').classList.remove('hidden');
+        document.getElementById('timer').innerText = "02:00:00";
+        document.getElementById('timer').classList.remove('text-amber-500', 'text-rose-600');
+        document.getElementById('timer').classList.add('text-blue-900');
+        document.getElementById('timer-stage-text').innerText = "Time left to check out";
         document.getElementById('meetup-update-input').value = "";
         document.getElementById('auth-form').reset();
         setProfileFormFromUser({});
@@ -2508,7 +2573,7 @@
       function armActionButtonLocks() {
         const actionIds = [
           "btn-home-log", "btn-add-phone", "btn-gps", "btn-img-stranger", "btn-img-support",
-          "btn-upgrade-paid", "btn-payment-refresh", "btn-add-update", "btn-end-meetup",
+          "btn-upgrade-paid", "btn-payment-refresh", "btn-add-update", "btn-end-meetup", "btn-extend-meetup",
           "btn-verify-capture", "btn-capture-prelog", "btn-log-submit", "auth-submit-btn"
         ];
         actionIds.forEach((id) => {
@@ -2595,6 +2660,11 @@
             meetupId: latest._id,
             preLogPhoto: latest.preLogPhoto || "",
             requireFaceMatch: latest.faceMatchEnabled !== false,
+            expectedDurationMinutes: Number(latest.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES),
+            graceMinutes: Number(latest.graceMinutes || DEFAULT_GRACE_MINUTES),
+            expectedEndAt: parseDateMs(latest.expectedEndAt) || (startedAtMs + DEFAULT_MEETUP_DURATION_MINUTES * 60 * 1000),
+            graceEndsAt: parseDateMs(latest.graceEndsAt) || (startedAtMs + (DEFAULT_MEETUP_DURATION_MINUTES + DEFAULT_GRACE_MINUTES) * 60 * 1000),
+            welfareCheckAt: parseDateMs(latest.welfareCheckAt) || parseDateMs(latest.expiresAt) || (startedAtMs + SECONDARY_WELFARE_HOURS * 60 * 60 * 1000),
             gpsLogs: [],
             updates: [],
             details: {
@@ -2627,7 +2697,10 @@
           document.getElementById('active-meetup-card-home').classList.remove('hidden');
           document.getElementById('no-active-meetup').classList.add('hidden');
           document.getElementById('protection-text').innerText =
-            `The "Meetily ${currentActive.pkg}" switch is active. Records auto-destruct in 48 hours.`;
+            `The "Meetily ${currentActive.pkg}" switch is active. Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace).`;
+          reminderLeadSent = !!latest.reminderLeadSentAt;
+          reminderDeadlineSent = !!latest.reminderDeadlineSentAt;
+          emergencyTriggered = !!latest.emergencyAlertTriggeredAt;
             
           renderActiveMeetupHomeCard();
           renderMeetupDetails();
@@ -2767,6 +2840,17 @@
       function validateLogForm() {
         let valid = true;
         valid = validateRequired(document.getElementById('log-package'), "Package is required") && valid;
+        const durationSelect = document.getElementById('meetup-duration-select');
+        const durationCustom = document.getElementById('meetup-duration-custom');
+        removeFieldError(durationSelect);
+        removeFieldError(durationCustom);
+        if (durationSelect?.value === "custom") {
+          const customMinutes = Number(durationCustom?.value || 0);
+          if (!Number.isFinite(customMinutes) || customMinutes < 15 || customMinutes > 2880) {
+            setFieldError(durationCustom, "Custom duration must be between 15 and 2880 minutes");
+            valid = false;
+          }
+        }
         valid = validateRequired(document.getElementById('place-type'), "Place type is required") && valid;
         valid = validateRequired(document.getElementById('address'), "Address/Location/Landmark is required") && valid;
         valid = validateRequired(document.getElementById('state-select'), "State is required") && valid;
@@ -3461,6 +3545,9 @@
         const supportImageDataUrls = await filesToDataUrls(supportFiles);
         return {
           selectedPackage: document.getElementById('log-package').value || "Basic",
+          expectedDurationMinutes: parseMeetupDurationMinutes(),
+          graceMinutes: parseGraceMinutes(),
+          secondaryWelfareHours: SECONDARY_WELFARE_HOURS,
           fullName: `${document.getElementById('fname').value} ${document.getElementById('lname').value}`.trim(),
           phones: [...document.querySelectorAll('.phone-entry')].map((el) => el.value).filter(Boolean),
           nickname: document.getElementById('nickname').value.trim(),
@@ -3497,6 +3584,8 @@
           <p><span class="font-black text-blue-900">Place:</span> ${d.placeType || '-'}</p>
           <p><span class="font-black text-blue-900">Location:</span> ${d.address || '-'}</p>
           <p><span class="font-black text-blue-900">State/LGA:</span> ${d.state || '-'} / ${d.lga || '-'}</p>
+          <p><span class="font-black text-blue-900">Expected Duration:</span> ${Number(currentActive?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES)} min</p>
+          <p><span class="font-black text-blue-900">Grace Period:</span> ${Number(currentActive?.graceMinutes || DEFAULT_GRACE_MINUTES)} min</p>
         `;
         const images = [...(d.strangerImageDataUrls || []), ...(d.supportImageDataUrls || [])];
         if (images.length) {
@@ -3702,6 +3791,15 @@
         if (supportName) supportName.innerText = "";
         const faceMatchToggle = document.getElementById('face-match-enabled');
         if (faceMatchToggle) faceMatchToggle.checked = true;
+        const durationSelect = document.getElementById('meetup-duration-select');
+        const durationCustom = document.getElementById('meetup-duration-custom');
+        const graceSelect = document.getElementById('meetup-grace-select');
+        if (durationSelect) durationSelect.value = "";
+        if (durationCustom) {
+          durationCustom.value = "";
+          durationCustom.classList.add('hidden');
+        }
+        if (graceSelect) graceSelect.value = String(DEFAULT_GRACE_MINUTES);
       }
 
       async function getCameraPermission() {
@@ -3908,17 +4006,25 @@
           meetupId: meetupId,
           preLogPhoto: preLogImageDataUrl,
           requireFaceMatch: !!pendingMeetupData?.faceMatchEnabled,
+          expectedDurationMinutes: Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES),
+          graceMinutes: Number(pendingMeetupData?.graceMinutes || DEFAULT_GRACE_MINUTES),
+          expectedEndAt: Date.now() + (Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) * 60 * 1000),
+          graceEndsAt: Date.now() + ((Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) + Number(pendingMeetupData?.graceMinutes || DEFAULT_GRACE_MINUTES)) * 60 * 1000),
+          welfareCheckAt: Date.now() + (SECONDARY_WELFARE_HOURS * 60 * 60 * 1000),
           gpsLogs: [],
           details: pendingMeetupData || {},
           updates: []
         };
+        reminderLeadSent = false;
+        reminderDeadlineSent = false;
+        emergencyTriggered = false;
         pendingLivenessPhoto = "";
         flushMeetupWriteQueue().catch(() => {});
         pendingMeetupData = null;
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
         document.getElementById('no-active-meetup').classList.add('hidden');
         document.getElementById('protection-text').innerText =
-          `The "Meetily ${activePackage}" switch is active. We will notify the authorities if you don't verify by the deadline.`;
+          `The "Meetily ${activePackage}" switch is active. Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace) to avoid emergency escalation.`;
         renderActiveMeetupHomeCard();
         renderMeetupDetails();
         startTimer();
@@ -4121,29 +4227,110 @@
         document.getElementById('no-active-meetup').classList.remove('hidden');
         document.getElementById('active-meetup-name-display').innerText = "Logging Active";
         document.getElementById('meetup-update-input').value = "";
+        document.getElementById('timer').innerText = "02:00:00";
+        document.getElementById('timer').classList.remove('text-amber-500', 'text-rose-600');
+        document.getElementById('timer').classList.add('text-blue-900');
+        document.getElementById('timer-stage-text').innerText = "Time left to check out";
 
         showScreen('screen-home');
         showUiAlert("Meetily: Data permanently deleted. Meetup secured.", "success");
         isEndingMeetup = false;
       }
 
+      async function extendActiveMeetup(minutesToAdd = 60) {
+        if (!currentActive) return;
+        const add = Math.max(15, Math.min(12 * 60, Number(minutesToAdd) || 60));
+        currentActive.expectedDurationMinutes = Number(currentActive.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) + add;
+        currentActive.expectedEndAt = Number(currentActive.expectedEndAt || Date.now()) + (add * 60 * 1000);
+        currentActive.graceEndsAt = Number(currentActive.graceEndsAt || Date.now()) + (add * 60 * 1000);
+        reminderLeadSent = false;
+        reminderDeadlineSent = false;
+        emergencyTriggered = false;
+        renderMeetupDetails();
+        startTimer();
+        showUiAlert(`Meetup extended by ${add} minutes.`, "success");
+        await sendMeetupUpdate({
+          meetupId: currentActive.meetupId,
+          updateType: "extend_time",
+          extendMinutes: add,
+          noteData: `Meetup extended by ${add} minutes`
+        });
+      }
+
       function startTimer() {
-        const baseStart = currentActive?.start || Date.now();
-        const end = baseStart + SCREEN_DURATION;
+        const timerEl = document.getElementById('timer');
+        const stageEl = document.getElementById('timer-stage-text');
+        const expectedEndAt = Number(currentActive?.expectedEndAt || 0);
+        const graceEndsAt = Number(currentActive?.graceEndsAt || 0);
+        const fallbackEnd = Date.now() + DEFAULT_MEETUP_DURATION_MINUTES * 60 * 1000;
+        const dueAt = expectedEndAt || fallbackEnd;
+        const escalationAt = graceEndsAt || (dueAt + DEFAULT_GRACE_MINUTES * 60 * 1000);
+
         clearInterval(timerInt);
         timerInt = setInterval(() => {
-          const diff = end - Date.now();
-          if (diff <= 0) { clearInterval(timerInt); timerInt = null; return; }
-          const h = Math.floor(diff / 3600000);
-          const m = Math.floor((diff % 3600000) / 60000);
-          const s = Math.floor((diff % 60000) / 1000);
-          document.getElementById('timer').innerText =
-            `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-          if (currentActive) currentActive.remainingMs = diff;
-          const almostDone = diff <= (2 * 60 * 60 * 1000);
-          const timerEl = document.getElementById('timer');
-          timerEl.classList.toggle('text-amber-500', almostDone);
-          timerEl.classList.toggle('text-blue-900', !almostDone);
+          const now = Date.now();
+          const beforeDueMs = dueAt - now;
+          const beforeEscalationMs = escalationAt - now;
+          let countdown = beforeDueMs;
+          let stage = "TIME_LEFT";
+
+          if (beforeDueMs > 0) {
+            countdown = beforeDueMs;
+            stage = "TIME_LEFT";
+            if (!reminderLeadSent && beforeDueMs <= REMINDER_LEAD_MS) {
+              reminderLeadSent = true;
+              sendMeetupUpdate({
+                meetupId: currentActive?.meetupId,
+                updateType: "reminder",
+                reminderStage: "LEAD_10M",
+                noteData: "Reminder sent: 10 minutes to expected check-out."
+              });
+            }
+          } else if (beforeEscalationMs > 0) {
+            countdown = beforeEscalationMs;
+            stage = "GRACE";
+            if (!reminderDeadlineSent) {
+              reminderDeadlineSent = true;
+              sendMeetupUpdate({
+                meetupId: currentActive?.meetupId,
+                updateType: "reminder",
+                reminderStage: "DUE_NOW",
+                noteData: "Reminder sent: expected time reached, grace period active."
+              });
+            }
+          } else {
+            countdown = 0;
+            stage = "EMERGENCY";
+            if (!emergencyTriggered) {
+              emergencyTriggered = true;
+              sendMeetupUpdate({
+                meetupId: currentActive?.meetupId,
+                updateType: "emergency_trigger",
+                noteData: "Emergency flow triggered after grace period expired."
+              });
+              showUiAlert("Grace period expired. Emergency flow has been triggered.", "error");
+            }
+          }
+
+          if (timerEl) timerEl.innerText = formatCountdown(countdown);
+          if (currentActive) {
+            currentActive.remainingMs = Math.max(0, beforeEscalationMs);
+          }
+
+          if (timerEl) {
+            timerEl.classList.toggle('text-blue-900', stage === "TIME_LEFT");
+            timerEl.classList.toggle('text-amber-500', stage === "GRACE");
+            timerEl.classList.toggle('text-rose-600', stage === "EMERGENCY");
+          }
+          if (stageEl) {
+            if (stage === "TIME_LEFT") {
+              stageEl.innerText = "Time left to check out";
+            } else if (stage === "GRACE") {
+              stageEl.innerText = "Grace period active";
+            } else {
+              stageEl.innerText = "Emergency flow triggered";
+            }
+          }
         }, 1000);
       }
 
@@ -4205,6 +4392,18 @@
       });
       document.getElementById('log-package').onchange = syncPackageOptionCards;
       syncPackageOptionCards();
+      const durationSelectEl = document.getElementById('meetup-duration-select');
+      const durationCustomEl = document.getElementById('meetup-duration-custom');
+      if (durationSelectEl && durationCustomEl) {
+        durationSelectEl.onchange = () => {
+          const isCustom = durationSelectEl.value === "custom";
+          durationCustomEl.classList.toggle('hidden', !isCustom);
+          if (!isCustom) {
+            durationCustomEl.value = "";
+            removeFieldError(durationCustomEl);
+          }
+        };
+      }
       armActionButtonLocks();
 
       // Active card click
@@ -4215,6 +4414,7 @@
 
       // Add phone
       document.getElementById('btn-add-phone').onclick = addPhoneField;
+      document.getElementById('btn-extend-meetup').onclick = () => extendActiveMeetup(60);
 
       // GPS
       document.getElementById('btn-gps').onclick = activateGPS;

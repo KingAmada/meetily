@@ -109,7 +109,7 @@
       <div class="hd">
         <div>
           <h1>Meetily Admin Dashboard</h1>
-          <div class="muted">All users, payments, meetup locations, ended meetups, and overdue 48-hour watch sessions.</div>
+          <div class="muted">All users, payments, meetup locations, ended meetups, grace sessions, and emergency-triggered watch sessions.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input id="api-base" class="input" value="https://peygo.net/_functions" aria-label="API base">
@@ -132,7 +132,10 @@
             <select id="meetup-filter" class="select">
               <option value="ALL">All</option>
               <option value="ACTIVE">Active</option>
-              <option value="OVERDUE_48H">Overdue 48h</option>
+              <option value="GRACE_PERIOD">Grace period</option>
+              <option value="ALERT_DUE">Alert due</option>
+              <option value="EMERGENCY_TRIGGERED">Emergency triggered</option>
+              <option value="OVERDUE_48H">Overdue welfare check</option>
               <option value="ENDED_BY_USER">Ended by user</option>
             </select>
           </div>
@@ -156,7 +159,7 @@
           <div class="kpi"><div class="label">Paid Users</div><div id="kpi-paid" class="value">0</div></div>
           <div class="kpi"><div class="label">Meetups</div><div id="kpi-meetups" class="value">0</div></div>
           <div class="kpi"><div class="label">Active</div><div id="kpi-active" class="value">0</div></div>
-          <div class="kpi"><div class="label">Overdue 48h</div><div id="kpi-overdue" class="value">0</div></div>
+          <div class="kpi"><div class="label">Overdue / Alert</div><div id="kpi-overdue" class="value">0</div></div>
           <div class="kpi"><div class="label">Ended</div><div id="kpi-ended" class="value">0</div></div>
         </div>
       </div>
@@ -277,6 +280,9 @@
 
     function lifecyclePill(v){
       if (v === "ACTIVE") return `<span class="pill good">ACTIVE</span>`;
+      if (v === "GRACE_PERIOD") return `<span class="pill warn">GRACE_PERIOD</span>`;
+      if (v === "ALERT_DUE") return `<span class="pill bad">ALERT_DUE</span>`;
+      if (v === "EMERGENCY_TRIGGERED") return `<span class="pill bad">EMERGENCY_TRIGGERED</span>`;
       if (v === "OVERDUE_48H") return `<span class="pill bad">OVERDUE_48H</span>`;
       if (v === "ENDED_BY_USER") return `<span class="pill warn">ENDED</span>`;
       return `<span class="pill">${v || "-"}</span>`;
