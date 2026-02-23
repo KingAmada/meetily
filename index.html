@@ -686,16 +686,16 @@
               </div>
 
               <div class="hero-face hero-face-back">
-                <img src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&q=80&w=1200" class="hero-bg-img opacity-60" alt="Caution background">
+                <img id="landing-hero-back-image" src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&q=80&w=1200" class="hero-bg-img opacity-60" alt="Caution background">
                 <div class="absolute inset-0 bg-blue-950/85 rounded-[2.5rem]"></div>
                 <div class="hero-back-float">
                   <i class="ph-bold ph-warning-circle text-rose-500 text-4xl mb-2"></i>
-                  <h2 class="text-white font-black text-lg uppercase mb-1">Don't Be Next</h2>
-                  <p class="text-blue-200 text-xs leading-relaxed mb-3">
+                  <h2 id="landing-hero-back-title" class="text-white font-black text-lg uppercase mb-1">Don't Be Next</h2>
+                  <p id="landing-hero-back-text" class="text-blue-200 text-xs leading-relaxed mb-3">
                     Criminals use fake dates, jobs, and business deals to lure victims.
                     Meetily ensures your trail is logged and monitored.
                   </p>
-                  <div class="inline-block px-3 py-1.5 border border-white/20 rounded-full text-[9px] text-white font-bold tracking-widest uppercase shadow-lg">
+                  <div id="landing-hero-back-label" class="inline-block px-3 py-1.5 border border-white/20 rounded-full text-[9px] text-white font-bold tracking-widest uppercase shadow-lg">
                     Logging Saves Lives
                   </div>
                 </div>
@@ -703,8 +703,8 @@
             </div>
           </div>
           <h1 id="landing-hero-headline" class="text-3xl font-extrabold leading-tight text-blue-900">Meetily Log Meetups.</h1>
-          <p id="landing-hero-subtext" class="text-base text-slate-600 leading-relaxed">Going on a date or meeting a stranger? logging it gives you a 48-hour safety net.</p>
-          <p class="text-xs text-slate-500 leading-relaxed">If you don't check-in after 48hrs, your FPC and authorities are notified immediately.</p>
+          <p id="landing-hero-subtext" class="text-base text-slate-600 leading-relaxed">Going on a date or meeting a stranger? logging it gives assurance you can be easily trace incase.</p>
+          <p class="text-xs text-slate-500 leading-relaxed">If you don't check-in within your set time, your emergency would be notified immediately.</p>
           <div class="grid grid-cols-2 gap-3">
             <button id="btn-landing-signup" class="w-full btn-primary font-bold py-3.5 rounded-2xl shadow-xl">
               Sign Up
@@ -816,6 +816,9 @@
 
         <div class="space-y-6 reveal-on-scroll">
           <h2 class="text-2xl font-black text-rose-600 text-center">Why We Exist</h2>
+          <p class="text-sm text-slate-600 leading-relaxed text-center max-w-2xl mx-auto">
+            You don't want people knowing your waka. But in this dangerous time, it's wise to leave a trace just in case. Meetily helps you save stranger (meetup) details privately, only you can access them. Once your meetup ends, your data is automatically deleted. If you don't check out, your emergency contact can be alerted for urgent action.
+          </p>
           <div class="grid grid-cols-1 gap-4">
             <div class="bg-rose-50 border border-rose-100 p-5 rounded-[2rem]">
               <div class="flex items-center gap-3 mb-2">
@@ -1514,6 +1517,26 @@
       const LANDING_HERO_HEADLINES = [
         "Meetily Log Meetups."
       ];
+      const LANDING_HERO_BACK_CARDS = [
+        {
+          image: "https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&q=80&w=1200",
+          title: "Don't Be Next",
+          text: "Criminals use fake dates, jobs, and business deals to lure victims. Meetily ensures your trail is logged and monitored.",
+          label: "Logging Saves Lives"
+        },
+        {
+          image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80&w=1200",
+          title: "Private By Default",
+          text: "Your stranger/meetup record stays private to you while active, gets deleted once you confirm you're safe. Think of Meetily as a friend that doesn't snitch until you're in danger.",
+          label: "Private Trail"
+        },
+        {
+          image: "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&q=80&w=1200",
+          title: "Leave A Trace",
+          text: "You don't want people knowing your waka. But in this dangerous time, it is wise to leave a trace just in case. Save the stranger/meetup details privately, and emergency contact can be alerted if you don't check out.",
+          label: "Urgent Backup"
+        }
+      ];
       const LANDING_HERO_BADGES = [
         "Hindy Umoren went for an interview. She never came back.",
         "A 35-year-old in Ogun went on a date. It was a ritual trap.",
@@ -1661,7 +1684,7 @@
       let toastVisibleTimeout = null;
       let landingHeroIndex = Math.floor(Math.random() * LANDING_HERO_BADGES.length);
       let landingHeroInterval = null;
-      let landingHeroFlipBusy = false;
+      let landingHeroCycleToken = 0;
       let testimonialIndex = Math.floor(Math.random() * TESTIMONIALS.length);
       let testimonialInterval = null;
       let currentScreenId = "screen-landing";
@@ -2941,51 +2964,81 @@
         populateStateOptions();
       }
 
-      function updateLandingHero(nextIndex) {
-        const image = document.getElementById('landing-hero-image');
-        const story = document.getElementById('landing-hero-story');
-        const headline = document.getElementById('landing-hero-headline');
-        const subtext = document.getElementById('landing-hero-subtext');
-        const inner = document.getElementById('landing-hero-inner');
-        if (!image || !story || !headline || !subtext || !inner || landingHeroFlipBusy) return;
-        const REAR_HOLD_MS = 5000;
-        landingHeroFlipBusy = true;
-        landingHeroIndex = nextIndex % LANDING_HERO_BADGES.length;
-        const imageIndex = landingHeroIndex % LANDING_HERO_IMAGES.length;
-        inner.classList.add('flipped');
-        setTimeout(() => {
-          image.src = LANDING_HERO_IMAGES[imageIndex];
-          story.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
-          headline.innerText = LANDING_HERO_HEADLINES[0];
-          setTimeout(() => {
-            inner.classList.remove('flipped');
-            setTimeout(() => { landingHeroFlipBusy = false; }, 380);
-          }, REAR_HOLD_MS);
-        }, 720);
-      }
-
       function startLandingHeroRotation() {
-        const FRONT_HOLD_MS = 6500;
         if (landingHeroInterval) clearTimeout(landingHeroInterval);
+        landingHeroCycleToken += 1;
+        const token = landingHeroCycleToken;
+
         const image = document.getElementById('landing-hero-image');
         const story = document.getElementById('landing-hero-story');
         const headline = document.getElementById('landing-hero-headline');
-        if (image && story && headline) {
-          const imageIndex = landingHeroIndex % LANDING_HERO_IMAGES.length;
-          image.src = LANDING_HERO_IMAGES[imageIndex];
-          story.innerText = LANDING_HERO_BADGES[landingHeroIndex] || LANDING_HERO_BADGES[0];
-          headline.innerText = LANDING_HERO_HEADLINES[0];
-        }
-        const queueNextFlip = () => {
-          landingHeroInterval = setTimeout(() => {
-            updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_BADGES.length);
-            queueNextFlip();
-          }, FRONT_HOLD_MS + 5000 + 2000);
+        const backImage = document.getElementById('landing-hero-back-image');
+        const backTitle = document.getElementById('landing-hero-back-title');
+        const backText = document.getElementById('landing-hero-back-text');
+        const backLabel = document.getElementById('landing-hero-back-label');
+        const inner = document.getElementById('landing-hero-inner');
+        if (!image || !story || !headline || !backImage || !backTitle || !backText || !backLabel || !inner) return;
+
+        const FRONT_DURATION_MS = 5500;
+        const BACK_SEQUENCE = [0, 2, 1]; // Don't Be Next -> Leave A Trace -> Private By Default
+        const BACK_DURATIONS_MS = [4500, 6200, 4500];
+
+        const pickNextFrontIndex = () => {
+          if (!LANDING_HERO_BADGES.length) return 0;
+          if (LANDING_HERO_BADGES.length === 1) return 0;
+          let next = landingHeroIndex;
+          while (next === landingHeroIndex) {
+            next = Math.floor(Math.random() * LANDING_HERO_BADGES.length);
+          }
+          return next;
         };
-        landingHeroInterval = setTimeout(() => {
-          updateLandingHero((landingHeroIndex + 1) % LANDING_HERO_BADGES.length);
-          queueNextFlip();
-        }, FRONT_HOLD_MS);
+
+        const applyFront = (idx) => {
+          const i = idx % LANDING_HERO_BADGES.length;
+          landingHeroIndex = i;
+          const imageIndex = i % LANDING_HERO_IMAGES.length;
+          image.src = LANDING_HERO_IMAGES[imageIndex];
+          story.innerText = LANDING_HERO_BADGES[i] || LANDING_HERO_BADGES[0];
+          headline.innerText = LANDING_HERO_HEADLINES[0];
+        };
+
+        const applyBack = (cardIndex) => {
+          const card = LANDING_HERO_BACK_CARDS[cardIndex] || LANDING_HERO_BACK_CARDS[0];
+          backImage.src = card.image;
+          backTitle.innerText = card.title;
+          backText.innerText = card.text;
+          backLabel.innerText = card.label;
+        };
+
+        const runCycle = () => {
+          if (token !== landingHeroCycleToken) return;
+          applyFront(pickNextFrontIndex());
+          inner.classList.remove('flipped');
+          landingHeroInterval = setTimeout(() => showBackPhase(0), FRONT_DURATION_MS);
+        };
+
+        const showBackPhase = (phaseIndex) => {
+          if (token !== landingHeroCycleToken) return;
+          const seqCardIndex = BACK_SEQUENCE[phaseIndex] ?? BACK_SEQUENCE[0];
+          const holdMs = BACK_DURATIONS_MS[phaseIndex] ?? 4500;
+          applyBack(seqCardIndex);
+          inner.classList.add('flipped');
+
+          landingHeroInterval = setTimeout(() => {
+            if (token !== landingHeroCycleToken) return;
+            if (phaseIndex < BACK_SEQUENCE.length - 1) {
+              showBackPhase(phaseIndex + 1);
+              return;
+            }
+            inner.classList.remove('flipped');
+            landingHeroInterval = setTimeout(runCycle, 700);
+          }, holdMs);
+        };
+
+        applyFront(landingHeroIndex);
+        applyBack(BACK_SEQUENCE[0]);
+        inner.classList.remove('flipped');
+        landingHeroInterval = setTimeout(() => showBackPhase(0), FRONT_DURATION_MS);
       }
 
       function updateTestimonial(nextIndex) {
