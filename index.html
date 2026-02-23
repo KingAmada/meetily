@@ -1622,6 +1622,9 @@
         "Turn your face slightly left",
         "Turn your face slightly right"
       ];
+      const FACE_MATCH_MAX_DISTANCE = 0.5;
+      const FACE_MIN_FRAME_RATIO = 0.12;
+      const SHARPNESS_MIN = 60;
 
       // Social proof controller
       let toastInterval = null;
@@ -3571,6 +3574,7 @@
             await faceapi.nets.tinyFaceDetector.loadFromUri(modelUri);
             await faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUri);
             await faceapi.nets.faceExpressionNet.loadFromUri(modelUri);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(modelUri);
             loaded = true;
             break;
           } catch (_) {
@@ -3754,6 +3758,87 @@
         return canvasEl.toDataURL('image/jpeg', 0.8);
       }
 
+      function computeSharpnessScore(imageData) {
+        const { width, height, data } = imageData;
+        let sum = 0;
+        let sumSq = 0;
+        let count = 0;
+        const gray = new Float32Array(width * height);
+        for (let i = 0, px = 0; i < data.length; i += 4, px += 1) {
+          gray[px] = (data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114);
+        }
+        for (let y = 1; y < height - 1; y += 1) {
+          for (let x = 1; x < width - 1; x += 1) {
+            const idx = y * width + x;
+            const lap = (4 * gray[idx]) - gray[idx - 1] - gray[idx + 1] - gray[idx - width] - gray[idx + width];
+            sum += lap;
+            sumSq += lap * lap;
+            count += 1;
+          }
+        }
+        if (!count) return 0;
+        const mean = sum / count;
+        return (sumSq / count) - (mean * mean);
+      }
+
+      async function detectFacesInSource(source) {
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.55 });
+        return faceapi
+          .detectAllFaces(source, options)
+          .withFaceLandmarks(true)
+          .withFaceDescriptors();
+      }
+
+      async function extractSingleFaceDescriptor(source, { minFrameRatio = FACE_MIN_FRAME_RATIO } = {}) {
+        const detections = await detectFacesInSource(source);
+        if (!Array.isArray(detections) || detections.length !== 1) {
+          return { ok: false, reason: detections?.length > 1 ? "multiple_faces" : "no_face" };
+        }
+        const det = detections[0];
+        const box = det?.detection?.box;
+        let frameRatio = 0;
+        if (box && source?.videoWidth && source?.videoHeight) {
+          frameRatio = (box.width * box.height) / (source.videoWidth * source.videoHeight);
+        } else if (box && source?.naturalWidth && source?.naturalHeight) {
+          frameRatio = (box.width * box.height) / (source.naturalWidth * source.naturalHeight);
+        } else if (box && source?.width && source?.height) {
+          frameRatio = (box.width * box.height) / (source.width * source.height);
+        }
+        if (frameRatio > 0 && frameRatio < minFrameRatio) {
+          return { ok: false, reason: "face_too_small" };
+        }
+        return { ok: true, descriptor: det.descriptor, detection: det };
+      }
+
+      async function loadImageElement(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      }
+
+      async function captureBestStableFrame(videoEl, canvasEl, attempts = 3, delayMs = 240) {
+        const ctx = canvasEl.getContext('2d');
+        canvasEl.width = videoEl.videoWidth || 320;
+        canvasEl.height = videoEl.videoHeight || 240;
+        let best = null;
+        for (let i = 0; i < attempts; i += 1) {
+          ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+          const imageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+          const sharpness = computeSharpnessScore(imageData);
+          const dataUrl = canvasEl.toDataURL('image/jpeg', 0.85);
+          if (!best || sharpness > best.sharpness) {
+            best = { dataUrl, sharpness };
+          }
+          if (i < attempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+        }
+        return best || { dataUrl: "", sharpness: 0 };
+      }
+
       function closePreLogModal() {
         document.getElementById('modal-prelog-photo').classList.add('hidden');
         closeCamera(document.getElementById('prelog-webcam'));
@@ -3773,34 +3858,6 @@
           status.innerText = describeCameraError(err);
           status.style.color = "#ef4444";
         }
-      }
-
-      async function scoreImageSimilarity(imgA, imgB) {
-        const load = (src) => new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = src;
-        });
-        const [a, b] = await Promise.all([load(imgA), load(imgB)]);
-        const size = 48;
-        const c1 = document.createElement('canvas');
-        const c2 = document.createElement('canvas');
-        c1.width = c1.height = c2.width = c2.height = size;
-        const x1 = c1.getContext('2d');
-        const x2 = c2.getContext('2d');
-        x1.drawImage(a, 0, 0, size, size);
-        x2.drawImage(b, 0, 0, size, size);
-        const d1 = x1.getImageData(0, 0, size, size).data;
-        const d2 = x2.getImageData(0, 0, size, size).data;
-        let diff = 0;
-        for (let i = 0; i < d1.length; i += 4) {
-          const g1 = (d1[i] + d1[i + 1] + d1[i + 2]) / 3;
-          const g2 = (d2[i] + d2[i + 1] + d2[i + 2]) / 3;
-          diff += Math.abs(g1 - g2);
-        }
-        const max = (d1.length / 4) * 255;
-        return 1 - (diff / max);
       }
 
       async function beginMeetupAfterCapture() {
@@ -3942,17 +3999,45 @@
           return;
         }
         status.style.color = "";
-        status.innerText = "Capturing proof...";
+        status.innerText = "Hold still for capture...";
         setLivenessBusy(true);
         try {
-          const liveImage = captureFrame(video, canvas);
+          const best = await captureBestStableFrame(video, canvas, 3, 220);
+          if (!best.dataUrl) {
+            status.innerText = "Capture failed. Try again.";
+            status.style.color = "#ef4444";
+            setLivenessBusy(false);
+            return;
+          }
+          if (best.sharpness < SHARPNESS_MIN) {
+            status.innerText = "Image too blurry. Hold still and retry.";
+            status.style.color = "#ef4444";
+            setLivenessBusy(false);
+            return;
+          }
+
+          const liveImage = best.dataUrl;
           pendingLivenessPhoto = liveImage;
           const shouldCompare = !!(currentActive?.requireFaceMatch && currentActive?.preLogPhoto);
           let matchPassed = true;
           if (shouldCompare) {
-            status.innerText = "Comparing images...";
-            const score = await scoreImageSimilarity(currentActive.preLogPhoto, liveImage);
-            matchPassed = score >= 0.60;
+            status.innerText = "Matching face identity...";
+            const [preImage, liveFrameImage] = await Promise.all([
+              loadImageElement(currentActive.preLogPhoto),
+              loadImageElement(liveImage)
+            ]);
+            const [preFace, liveFace] = await Promise.all([
+              extractSingleFaceDescriptor(preImage),
+              extractSingleFaceDescriptor(liveFrameImage)
+            ]);
+            if (!preFace.ok || !liveFace.ok) {
+              status.innerText = "Face not clear enough. Keep one face, move closer, and retry.";
+              status.style.color = "#ef4444";
+              setLivenessBusy(false);
+              return;
+            }
+            const faceDistance = faceapi.euclideanDistance(preFace.descriptor, liveFace.descriptor);
+            matchPassed = faceDistance <= FACE_MATCH_MAX_DISTANCE;
           }
           if (matchPassed) {
             isEndingMeetup = true;
@@ -4323,7 +4408,34 @@
         isPrelogCaptureBusy = true;
         setButtonLoading(captureBtn, true, "Saving...");
         try {
-          preLogImageDataUrl = captureFrame(video, canvas);
+          status.style.color = "";
+          status.innerText = "Hold still...";
+          const best = await captureBestStableFrame(video, canvas, 3, 220);
+          if (!best.dataUrl) {
+            status.innerText = "Capture failed. Try again.";
+            status.style.color = "#ef4444";
+            return;
+          }
+          if (best.sharpness < SHARPNESS_MIN) {
+            status.innerText = "Image is blurry. Hold still and retry.";
+            status.style.color = "#ef4444";
+            return;
+          }
+          await ensureFaceModelsLoaded(status);
+          const prelogImage = await loadImageElement(best.dataUrl);
+          const prelogFace = await extractSingleFaceDescriptor(prelogImage);
+          if (!prelogFace.ok) {
+            status.style.color = "#ef4444";
+            if (prelogFace.reason === "multiple_faces") {
+              status.innerText = "Multiple faces found. Keep only your face in frame.";
+            } else if (prelogFace.reason === "face_too_small") {
+              status.innerText = "Move closer. Face must fill more of the frame.";
+            } else {
+              status.innerText = "No clear face found. Retry in better lighting.";
+            }
+            return;
+          }
+          preLogImageDataUrl = best.dataUrl;
           closePreLogModal();
           await beginMeetupAfterCapture();
         } finally {
