@@ -669,7 +669,7 @@
           <i class="ph-bold ph-user-circle text-blue-600 text-xl"></i>
         </div>
         <div>
-          <p id="toast-text" class="text-xs font-medium text-blue-900 leading-tight">Someone in Lagos just logged a meetup.</p>
+          <p id="toast-text" class="text-xs font-medium text-blue-900 leading-tight">T***d in Abuja Municipal Area Council logged a meetup.</p>
           <p class="text-[10px] text-blue-400 font-bold uppercase mt-1">Verified User • Now</p>
         </div>
       </div>
@@ -689,7 +689,9 @@
         </button>
       </div>
       <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
-        <img src="./Meetily%20Logo.png" alt="Meetily logo" class="h-8 w-auto object-contain">
+        <button id="btn-logo-home" type="button" class="p-0 border-0 bg-transparent cursor-pointer" aria-label="Go to homepage">
+          <img src="./Meetily%20Logo.png" alt="Meetily logo" class="h-8 w-auto object-contain">
+        </button>
       </div>
       <div id="user-info-reveal" class="hidden w-20 flex items-center justify-end gap-2">
         <span id="header-user-name" class="hidden sm:block max-w-[88px] truncate text-xs font-black text-blue-700 uppercase tracking-widest"></span>
@@ -1525,12 +1527,12 @@
       };
       let nigeriaData = JSON.parse(JSON.stringify(NIGERIA_DATA_FALLBACK));
 
-      const socialProofEvents = [
-        "User in Kaduna just verified safely.",
-        "Tunde in Lagos just started a log.",
-        "Jessica in Abuja logged a meetup.",
-        "A traveler in Maiduguri is protected."
+      const SOCIAL_PROOF_NAMES = [
+        "Tunde", "Lara", "Chidinma", "Femi", "Ifeanyi", "Amara", "Aisha", "Samuel",
+        "Bola", "Uche", "Temitope", "Kelechi", "Ngozi", "Damilola", "Yusuf", "Mariam",
+        "Sodiq", "Blessing", "Kelvin", "Ruth", "Adebayo", "Oluchi", "Daniel", "Zainab"
       ];
+      const SOCIAL_PROOF_RECENT_LIMIT = 16;
       const LANDING_HERO_IMAGES = [
         "./abandoned_site_discarded_folder_shoe.jpeg",
         "./abuja_business_lobby_safety_watch_active.jpeg",
@@ -1726,6 +1728,7 @@
       // Social proof controller
       let toastInterval = null;
       let toastVisibleTimeout = null;
+      const socialProofRecent = [];
       let landingHeroIndex = Math.floor(Math.random() * LANDING_HERO_BADGES.length);
       let landingHeroInterval = null;
       let landingHeroCycleToken = 0;
@@ -3459,12 +3462,81 @@
         }, 15000);
       }
 
+      function maskSocialProofName(name) {
+        const clean = String(name || "").trim();
+        if (!clean) return "U***r";
+        if (clean.length <= 2) return `${clean[0]}***`;
+        return `${clean[0]}***${clean[clean.length - 1]}`;
+      }
+
+      function randomStateAndLga() {
+        const states = Object.keys(nigeriaData || {}).filter(Boolean);
+        const state = states.length
+          ? states[Math.floor(Math.random() * states.length)]
+          : ALL_STATES[Math.floor(Math.random() * ALL_STATES.length)];
+        const lgas = Array.isArray(nigeriaData?.[state]) ? nigeriaData[state].filter(Boolean) : [];
+        const lga = lgas.length ? lgas[Math.floor(Math.random() * lgas.length)] : "";
+        return { state, lga };
+      }
+
+      function randomPastPhrase() {
+        const patterns = [
+          "Last week, {name} ended a meetup safely by this time in {place}.",
+          "3 days ago, {name} ended a meetup safely by this time in {place}.",
+          "Yesterday around this time, {name} verified safely in {place}.",
+          "2 days ago, {name} logged a meetup around this time in {place}.",
+          "Last weekend, {name} completed a safe check-out in {place}.",
+          "Earlier this week, {name} started a meetup log in {place}."
+        ];
+        return patterns[Math.floor(Math.random() * patterns.length)];
+      }
+
+      function randomLivePhrase() {
+        const patterns = [
+          "{name} in {place} logged a meetup.",
+          "{name} in {place} started a safety watch.",
+          "{name} in {place} just verified safely.",
+          "{name} in {place} enabled a meetup timer.",
+          "{name} in {place} secured a check-in trail."
+        ];
+        return patterns[Math.floor(Math.random() * patterns.length)];
+      }
+
+      function buildSocialProofEvent() {
+        const maskedName = maskSocialProofName(
+          SOCIAL_PROOF_NAMES[Math.floor(Math.random() * SOCIAL_PROOF_NAMES.length)]
+        );
+        const { state, lga } = randomStateAndLga();
+        const place = lga ? `${lga}, ${state}` : state;
+        const isPastEvent = Math.random() < 0.45;
+        const template = isPastEvent ? randomPastPhrase() : randomLivePhrase();
+        return template
+          .replace("{name}", maskedName)
+          .replace("{place}", place || "Nigeria");
+      }
+
+      function nextSocialProofEvent() {
+        let candidate = "";
+        for (let i = 0; i < 18; i += 1) {
+          candidate = buildSocialProofEvent();
+          if (!socialProofRecent.includes(candidate)) break;
+        }
+        if (!candidate) candidate = "A***a in Nigeria logged a meetup.";
+        socialProofRecent.push(candidate);
+        if (socialProofRecent.length > SOCIAL_PROOF_RECENT_LIMIT) {
+          socialProofRecent.splice(0, socialProofRecent.length - SOCIAL_PROOF_RECENT_LIMIT);
+        }
+        return candidate;
+      }
+
       function startSocialProof() {
         stopSocialProof(); // ensure single instance
+        const txt = document.getElementById('toast-text');
+        if (txt) txt.innerText = nextSocialProofEvent();
         toastInterval = setInterval(() => {
           const toast = document.getElementById('social-proof-toast');
-          const txt = document.getElementById('toast-text');
-          txt.innerText = socialProofEvents[Math.floor(Math.random() * socialProofEvents.length)];
+          const textEl = document.getElementById('toast-text');
+          if (textEl) textEl.innerText = nextSocialProofEvent();
           toast.classList.add('show');
           clearTimeout(toastVisibleTimeout);
           toastVisibleTimeout = setTimeout(() => toast.classList.remove('show'), 3200);
@@ -4609,6 +4681,13 @@
       document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
       document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
       document.getElementById('btn-back').onclick = goBack;
+      const logoHomeBtn = document.getElementById('btn-logo-home');
+      if (logoHomeBtn) {
+        logoHomeBtn.onclick = () => {
+          const destination = signedInUser?.phone ? 'screen-home' : 'screen-landing';
+          showScreen(destination);
+        };
+      }
       document.getElementById('auth-legal-agree').onchange = (e) => {
         const legalError = document.getElementById('auth-legal-error');
         if (e.target.checked && legalError) legalError.classList.add('hidden');
