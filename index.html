@@ -1240,6 +1240,12 @@
           <button id="btn-end-meetup" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl">
             Verify to End Meetup
           </button>
+          <div class="stat-card p-4 space-y-2 border border-rose-200 bg-rose-50/70">
+            <button id="btn-sos-hold" type="button" class="w-full bg-rose-600 text-white py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl select-none">
+              Hold 3s to Call SOS
+            </button>
+            <p id="sos-status-text" class="text-[11px] text-rose-700 font-bold text-center">Nigeria emergency: 112</p>
+          </div>
           <div class="stat-card p-4 space-y-3 border border-amber-200 bg-amber-50/70">
             <p class="text-[10px] font-black text-amber-700 uppercase tracking-[0.16em]">Extend Meetup Window</p>
             <div class="grid grid-cols-2 gap-2">
@@ -1724,6 +1730,11 @@
       const FACE_MATCH_MAX_DISTANCE = 0.5;
       const FACE_MIN_FRAME_RATIO = 0.12;
       const SHARPNESS_MIN = 60;
+      const SOS_PHONE_NUMBER = "112";
+      const SOS_HOLD_MS = 3000;
+      let sosHoldTimer = null;
+      let sosProgressTimer = null;
+      let sosHoldStartedAt = 0;
 
       // Social proof controller
       let toastInterval = null;
@@ -2110,6 +2121,83 @@
           ? `Check out by ${currentActive.customTimeWindow.endLabel} (+${currentActive.graceMinutes} min grace).`
           : `Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace).`;
         textEl.innerText = `The "Meetily ${currentActive.pkg}" switch is active. ${suffix}`;
+      }
+
+      function setSosUiState(state, secondsLeft = 3) {
+        const btn = document.getElementById('btn-sos-hold');
+        const status = document.getElementById('sos-status-text');
+        if (!btn || !status) return;
+        if (state === "holding") {
+          btn.innerText = `Keep Holding (${secondsLeft}s)`;
+          btn.classList.remove('bg-rose-600');
+          btn.classList.add('bg-rose-700');
+          status.innerText = `Keep pressing to call ${SOS_PHONE_NUMBER}`;
+          return;
+        }
+        if (state === "calling") {
+          btn.innerText = "Calling Emergency...";
+          btn.classList.remove('bg-rose-600');
+          btn.classList.add('bg-rose-700');
+          status.innerText = `Dialing Nigeria emergency: ${SOS_PHONE_NUMBER}`;
+          return;
+        }
+        btn.innerText = "Hold 3s to Call SOS";
+        btn.classList.remove('bg-rose-700');
+        btn.classList.add('bg-rose-600');
+        status.innerText = `Nigeria emergency: ${SOS_PHONE_NUMBER}`;
+      }
+
+      function cancelSosHold() {
+        if (sosHoldTimer) {
+          clearTimeout(sosHoldTimer);
+          sosHoldTimer = null;
+        }
+        if (sosProgressTimer) {
+          clearInterval(sosProgressTimer);
+          sosProgressTimer = null;
+        }
+        sosHoldStartedAt = 0;
+        setSosUiState("idle");
+      }
+
+      function triggerEmergencyDial() {
+        cancelSosHold();
+        setSosUiState("calling");
+        window.location.href = `tel:${SOS_PHONE_NUMBER}`;
+        setTimeout(() => {
+          setSosUiState("idle");
+        }, 1200);
+      }
+
+      function startSosHold(event) {
+        if (event) event.preventDefault();
+        if (sosHoldTimer) return;
+        sosHoldStartedAt = Date.now();
+        setSosUiState("holding", 3);
+        sosProgressTimer = setInterval(() => {
+          const elapsed = Date.now() - sosHoldStartedAt;
+          const secondsLeft = Math.max(0, Math.ceil((SOS_HOLD_MS - elapsed) / 1000));
+          setSosUiState("holding", secondsLeft);
+        }, 100);
+        sosHoldTimer = setTimeout(() => {
+          sosHoldTimer = null;
+          if (sosProgressTimer) {
+            clearInterval(sosProgressTimer);
+            sosProgressTimer = null;
+          }
+          triggerEmergencyDial();
+        }, SOS_HOLD_MS);
+      }
+
+      function setupSosHoldButton() {
+        const btn = document.getElementById('btn-sos-hold');
+        if (!btn) return;
+        btn.addEventListener('pointerdown', startSosHold);
+        btn.addEventListener('pointerup', cancelSosHold);
+        btn.addEventListener('pointercancel', cancelSosHold);
+        btn.addEventListener('pointerleave', cancelSosHold);
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
+        setSosUiState("idle");
       }
 
       function formatCountdown(ms) {
@@ -4681,6 +4769,7 @@
       document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
       document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
       document.getElementById('btn-back').onclick = goBack;
+      setupSosHoldButton();
       const logoHomeBtn = document.getElementById('btn-logo-home');
       if (logoHomeBtn) {
         logoHomeBtn.onclick = () => {
