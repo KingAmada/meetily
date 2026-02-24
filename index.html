@@ -1327,6 +1327,8 @@
             </div>
             <p id="payment-status-text" class="text-xs text-slate-500 text-center font-bold uppercase tracking-widest">Waiting for payment confirmation...</p>
             <p id="payment-required-package" class="text-[10px] text-blue-500 text-center font-black uppercase tracking-widest">Required plan: -</p>
+            <p id="payment-required-amount" class="text-sm text-blue-900 text-center font-black">Amount to transfer: -</p>
+            <p id="payment-amount-warning" class="text-[11px] text-rose-600 text-center font-bold">Send exact amount for quick auto-confirmation.</p>
           </div>
           <div class="p-4 sm:p-5 border-t border-slate-100 bg-white">
             <div class="grid grid-cols-2 gap-3">
@@ -2593,11 +2595,22 @@
         return currentRank >= requiredRank;
       }
 
+      function formatNaira(amount) {
+        const num = Number(amount || 0);
+        if (!Number.isFinite(num) || num <= 0) return "-";
+        return `₦${num.toLocaleString()}`;
+      }
+
       function openPaymentModal(accountNumber, requiredPackage) {
         requiredPaymentPackage = requiredPackage || requiredPaymentPackage || "Basic";
+        const requiredAmount = extractNumber(PACKAGE_MIN_PAYMENT[requiredPaymentPackage] || 0);
         document.getElementById('payment-account-number').innerText = accountNumber || "-";
         document.getElementById('payment-status-text').innerText = "Waiting for payment confirmation...";
         document.getElementById('payment-required-package').innerText = `Required plan: ${requiredPaymentPackage}`;
+        document.getElementById('payment-required-amount').innerText = `Amount to transfer: ${formatNaira(requiredAmount)}`;
+        document.getElementById('payment-amount-warning').innerText = requiredAmount > 0
+          ? `Send exact amount (${formatNaira(requiredAmount)}) to avoid delay.`
+          : "Send exact amount for quick auto-confirmation.";
         document.getElementById('modal-payment').classList.remove('hidden');
       }
 
@@ -3644,7 +3657,22 @@
         return (id === 'screen-landing' || id === 'screen-home');
       }
 
+      function canShowScreen(id) {
+        if (id === 'screen-active' && !currentActive) return false;
+        return true;
+      }
+
+      function removeScreenFromHistory(id) {
+        if (!id || !screenHistory.length) return;
+        for (let i = screenHistory.length - 1; i >= 0; i -= 1) {
+          if (screenHistory[i] === id) screenHistory.splice(i, 1);
+        }
+      }
+
       function showScreen(id, options = {}) {
+        if (!canShowScreen(id)) {
+          id = signedInUser?.phone ? 'screen-home' : 'screen-landing';
+        }
         const noHistory = !!options.noHistory;
         if (!noHistory && currentScreenId && currentScreenId !== id) {
           screenHistory.push(currentScreenId);
@@ -3680,9 +3708,14 @@
 
       function goBack() {
         if (!screenHistory.length) return;
-        const prev = screenHistory.pop();
-        if (!prev) return;
-        showScreen(prev, { noHistory: true });
+        while (screenHistory.length) {
+          const prev = screenHistory.pop();
+          if (!prev) continue;
+          if (!canShowScreen(prev)) continue;
+          showScreen(prev, { noHistory: true });
+          return;
+        }
+        showScreen(signedInUser?.phone ? 'screen-home' : 'screen-landing', { noHistory: true });
       }
 
       function toggleAuthMode() {
@@ -4622,6 +4655,7 @@
         document.getElementById('timer').classList.remove('text-amber-500', 'text-rose-600');
         document.getElementById('timer').classList.add('text-blue-900');
         document.getElementById('timer-stage-text').innerText = "Time left to check out";
+        removeScreenFromHistory('screen-active');
 
         showScreen('screen-home');
         showUiAlert("Meetily: Data permanently deleted. Meetup secured.", "success");
