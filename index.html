@@ -737,12 +737,18 @@
           <h1 id="landing-hero-headline" class="text-3xl font-extrabold leading-tight text-blue-900">Meetily Log Meetups.</h1>
           <p id="landing-hero-subtext" class="text-base text-slate-600 leading-relaxed">Going on a date or meeting a stranger? logging it gives assurance you can be easily trace incase.</p>
           <p class="text-xs text-slate-500 leading-relaxed">If you don't check-in within your set time, your emergency contact would be notified immediately.</p>
-          <div class="grid grid-cols-2 gap-3">
+          <div id="landing-auth-actions" class="grid grid-cols-2 gap-3">
             <button id="btn-landing-signup" class="w-full btn-primary font-bold py-3.5 rounded-2xl shadow-xl">
               Sign Up
             </button>
             <button id="btn-landing-signin" class="w-full bg-white text-blue-700 border border-blue-200 font-bold py-3.5 rounded-2xl shadow-sm">
               Sign In
+            </button>
+          </div>
+          <div id="landing-signedin-actions" class="hidden space-y-2">
+            <p class="text-center text-xs font-black uppercase tracking-widest text-emerald-600">You are signed in</p>
+            <button id="btn-landing-home" class="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-xl">
+              Go to Home
             </button>
           </div>
           <p class="text-center text-xs font-bold text-slate-500">Your spirit might hunt them or not, but Meetily will ensure police have neccessary data, incase of what we don't pray for happen</p>
@@ -3995,6 +4001,11 @@
         document.getElementById('profile-user-name').innerText = `Name: ${signedInUser.name || "-"}`;
         document.getElementById('profile-user-phone').innerText = `Phone: ${signedInUser.phone || "-"}`;
         document.getElementById('header-user-name').innerText = signedInUser.name ? signedInUser.name : "";
+        const isSignedIn = !!normalizePhone(signedInUser.phone || "");
+        const authActions = document.getElementById('landing-auth-actions');
+        const signedInActions = document.getElementById('landing-signedin-actions');
+        if (authActions) authActions.classList.toggle('hidden', isSignedIn);
+        if (signedInActions) signedInActions.classList.toggle('hidden', !isSignedIn);
       }
 
       function setProfileFormFromUser(user = {}) {
@@ -4801,6 +4812,7 @@
       // ======= Wire up events (this is where your “Log button not working” was) =======
       document.getElementById('btn-landing-signup').onclick = () => openAuth('signup');
       document.getElementById('btn-landing-signin').onclick = () => openAuth('signin');
+      document.getElementById('btn-landing-home').onclick = () => showScreen('screen-home');
       document.getElementById('btn-toggle-auth').onclick = toggleAuthMode;
       document.getElementById('btn-back').onclick = goBack;
       setupSosHoldButton();
