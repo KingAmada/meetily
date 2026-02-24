@@ -12,8 +12,11 @@
   <meta name="theme-color" content="#0b1538" />
   <meta name="application-name" content="Meetily" />
   <meta name="apple-mobile-web-app-title" content="Meetily" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="canonical" href="https://kingamada.github.io/meetily/" />
+  <link rel="manifest" href="./manifest.webmanifest" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Meetily" />
@@ -39,9 +42,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="icon" type="image/png" href="./Meetily%20Fav%20Icon.png" />
   <link rel="shortcut icon" type="image/png" href="./Meetily%20Fav%20Icon.png" />
-  <link rel="apple-touch-icon" href="./Meetily%20Fav%20Icon.png" />
-  <link rel="icon" sizes="192x192" href="./Meetily%20Fav%20Icon.png" />
-  <link rel="icon" sizes="512x512" href="./Meetily%20Fav%20Icon.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="icon" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="icon" sizes="512x512" href="./icons/icon-512.png" />
 
   <script type="application/ld+json">
     {
@@ -392,6 +395,32 @@
       transform:translateY(0);
       opacity:1;
     }
+    #btn-install-app{
+      position:absolute;
+      right:14px;
+      bottom:calc(var(--nav-h) + 14px + var(--safe-bottom));
+      z-index:86;
+      border:none;
+      border-radius:999px;
+      padding:10px 14px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:#fff;
+      background:linear-gradient(135deg,#0b1538,#1d4ed8);
+      box-shadow:0 18px 34px -18px rgba(11,21,56,.9);
+      transition:transform .2s ease, opacity .2s ease, box-shadow .2s ease;
+    }
+    #btn-install-app:hover{transform:translateY(-1px);}
+    #btn-install-app:active{transform:translateY(0);}
+    #btn-install-app[data-install-state="installed"]{
+      display:none;
+    }
+    #btn-install-app[data-install-state="unavailable"],
+    #btn-install-app[data-install-state="unsupported"]{
+      opacity:.86;
+    }
 
     /* --- FIXED 3D ENGINE --- */
     .hero-flip-container{
@@ -645,6 +674,7 @@
         </div>
       </div>
     </div>
+    <button id="btn-install-app" type="button" data-install-app-btn data-install-state="unavailable" aria-label="Install Meetily app">Install App</button>
     <div id="ui-alert" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-[122] w-[90%] max-w-sm">
       <div id="ui-alert-box" class="rounded-2xl border border-blue-100 bg-white/95 backdrop-blur-md shadow-xl px-4 py-3">
         <p id="ui-alert-text" class="text-xs font-black uppercase tracking-widest text-blue-700"></p>
@@ -1044,7 +1074,13 @@
               <option value="1440">24 hours</option>
               <option value="custom">Custom</option>
             </select>
-            <input id="meetup-duration-custom" type="number" min="15" max="2880" step="5" class="form-input hidden" placeholder="Custom duration in minutes (15 - 2880)">
+            <div id="meetup-duration-custom-wrap" class="hidden space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <input id="meetup-time-start" type="time" class="form-input" placeholder="Start time">
+                <input id="meetup-time-end" type="time" class="form-input" placeholder="End time">
+              </div>
+              <p class="text-[11px] text-slate-500">Set a time window, e.g. 12:00 PM - 8:30 PM.</p>
+            </div>
             <select id="meetup-grace-select" class="form-input">
               <option value="10">Grace period: 10 minutes</option>
               <option value="20" selected>Grace period: 20 minutes</option>
@@ -1202,9 +1238,17 @@
           <button id="btn-end-meetup" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl">
             Verify to End Meetup
           </button>
-          <button id="btn-extend-meetup" type="button" class="w-full bg-amber-500 text-white py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl">
-            Extend Meetup +1 Hour
-          </button>
+          <div class="stat-card p-4 space-y-3 border border-amber-200 bg-amber-50/70">
+            <p class="text-[10px] font-black text-amber-700 uppercase tracking-[0.16em]">Extend Meetup Window</p>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="extend-time-start" type="time" class="form-input" placeholder="Start time">
+              <input id="extend-time-end" type="time" class="form-input" placeholder="End time">
+            </div>
+            <input id="extend-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="form-input" placeholder="Enter PIN to confirm extension">
+            <button id="btn-extend-meetup" type="button" class="w-full bg-amber-500 text-white py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl">
+              Extend Meetup Timer
+            </button>
+          </div>
 
           <div class="stat-card p-6 border-t-4 border-blue-500">
             <h3 class="text-xs font-black text-blue-900 uppercase tracking-[0.2em] mb-4">Current Protection</h3>
@@ -1979,13 +2023,70 @@
         return Number.isFinite(ms) ? ms : 0;
       }
 
+      function parseClockMinutes(value) {
+        const txt = String(value || "").trim();
+        if (!/^\d{2}:\d{2}$/.test(txt)) return NaN;
+        const [h, m] = txt.split(':').map((part) => Number(part));
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return NaN;
+        if (h < 0 || h > 23 || m < 0 || m > 59) return NaN;
+        return h * 60 + m;
+      }
+
+      function formatClockLabel(value) {
+        const mins = parseClockMinutes(value);
+        if (!Number.isFinite(mins)) return "";
+        const hh24 = Math.floor(mins / 60);
+        const mm = mins % 60;
+        const suffix = hh24 >= 12 ? "PM" : "AM";
+        const hh12 = (hh24 % 12) || 12;
+        return `${hh12}:${String(mm).padStart(2, '0')} ${suffix}`;
+      }
+
+      function resolveTimeWindow(startValue, endValue, referenceMs = Date.now()) {
+        const startMins = parseClockMinutes(startValue);
+        const endMinsRaw = parseClockMinutes(endValue);
+        if (!Number.isFinite(startMins) || !Number.isFinite(endMinsRaw)) return null;
+
+        let endMins = endMinsRaw;
+        if (endMins <= startMins) endMins += 24 * 60;
+        const durationMinutes = endMins - startMins;
+        if (durationMinutes < 15 || durationMinutes > 1440) return null;
+
+        const base = new Date(referenceMs);
+        base.setSeconds(0, 0);
+
+        const startAt = new Date(base);
+        startAt.setHours(Math.floor(startMins / 60), startMins % 60, 0, 0);
+        const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
+
+        while (endAt.getTime() <= referenceMs) {
+          startAt.setDate(startAt.getDate() + 1);
+          endAt.setDate(endAt.getDate() + 1);
+        }
+
+        return {
+          startTime: startValue,
+          endTime: endValue,
+          startLabel: formatClockLabel(startValue),
+          endLabel: formatClockLabel(endValue),
+          durationMinutes,
+          startAtMs: startAt.getTime(),
+          endAtMs: endAt.getTime()
+        };
+      }
+
+      function customWindowFromForm(referenceMs = Date.now()) {
+        const startValue = document.getElementById('meetup-time-start')?.value || "";
+        const endValue = document.getElementById('meetup-time-end')?.value || "";
+        return resolveTimeWindow(startValue, endValue, referenceMs);
+      }
+
       function parseMeetupDurationMinutes() {
         const select = document.getElementById('meetup-duration-select');
-        const custom = document.getElementById('meetup-duration-custom');
         const selected = String(select?.value || "").trim();
         if (selected === "custom") {
-          const n = Number(custom?.value || 0);
-          if (Number.isFinite(n) && n >= 15 && n <= 2880) return Math.round(n);
+          const windowRange = customWindowFromForm();
+          if (windowRange) return windowRange.durationMinutes;
           return DEFAULT_MEETUP_DURATION_MINUTES;
         }
         const n = Number(selected || DEFAULT_MEETUP_DURATION_MINUTES);
@@ -1997,6 +2098,15 @@
         const grace = Number(document.getElementById('meetup-grace-select')?.value || DEFAULT_GRACE_MINUTES);
         if (Number.isFinite(grace) && grace >= 10 && grace <= 30) return Math.round(grace);
         return DEFAULT_GRACE_MINUTES;
+      }
+
+      function updateProtectionText() {
+        const textEl = document.getElementById('protection-text');
+        if (!textEl || !currentActive) return;
+        const suffix = currentActive?.customTimeWindow?.endLabel
+          ? `Check out by ${currentActive.customTimeWindow.endLabel} (+${currentActive.graceMinutes} min grace).`
+          : `Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace).`;
+        textEl.innerText = `The "Meetily ${currentActive.pkg}" switch is active. ${suffix}`;
       }
 
       function formatCountdown(ms) {
@@ -2716,11 +2826,17 @@
               time: new Date(latest.lastUpdateAt).toLocaleString()
             });
           }
+          if (latest.customTimeWindow && typeof latest.customTimeWindow === "object") {
+            currentActive.customTimeWindow = latest.customTimeWindow;
+            currentActive.details = {
+              ...(currentActive.details || {}),
+              customTimeWindow: latest.customTimeWindow
+            };
+          }
 
           document.getElementById('active-meetup-card-home').classList.remove('hidden');
           document.getElementById('no-active-meetup').classList.add('hidden');
-          document.getElementById('protection-text').innerText =
-            `The "Meetily ${currentActive.pkg}" switch is active. Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace).`;
+          updateProtectionText();
           reminderLeadSent = !!latest.reminderLeadSentAt;
           reminderDeadlineSent = !!latest.reminderDeadlineSentAt;
           emergencyTriggered = !!latest.emergencyAlertTriggeredAt;
@@ -2864,13 +2980,16 @@
         let valid = true;
         valid = validateRequired(document.getElementById('log-package'), "Package is required") && valid;
         const durationSelect = document.getElementById('meetup-duration-select');
-        const durationCustom = document.getElementById('meetup-duration-custom');
+        const customStart = document.getElementById('meetup-time-start');
+        const customEnd = document.getElementById('meetup-time-end');
         removeFieldError(durationSelect);
-        removeFieldError(durationCustom);
+        removeFieldError(customStart);
+        removeFieldError(customEnd);
         if (durationSelect?.value === "custom") {
-          const customMinutes = Number(durationCustom?.value || 0);
-          if (!Number.isFinite(customMinutes) || customMinutes < 15 || customMinutes > 2880) {
-            setFieldError(durationCustom, "Custom duration must be between 15 and 2880 minutes");
+          const range = customWindowFromForm();
+          if (!range) {
+            setFieldError(customStart, "Set valid start and end times");
+            setFieldError(customEnd, "Time window must be at least 15 minutes");
             valid = false;
           }
         }
@@ -3596,11 +3715,23 @@
         const supportFiles = inSupport.files ? Array.from(inSupport.files) : [];
         const strangerImageDataUrls = await filesToDataUrls(strangerFiles.slice(0, 1));
         const supportImageDataUrls = await filesToDataUrls(supportFiles);
+        const customTimeWindow = document.getElementById('meetup-duration-select')?.value === "custom"
+          ? customWindowFromForm()
+          : null;
+        const expectedDurationMinutes = customTimeWindow?.durationMinutes || parseMeetupDurationMinutes();
+        const expectedEndAtMs = customTimeWindow?.endAtMs || (Date.now() + expectedDurationMinutes * 60 * 1000);
         return {
           selectedPackage: document.getElementById('log-package').value || "Basic",
-          expectedDurationMinutes: parseMeetupDurationMinutes(),
+          expectedDurationMinutes,
+          expectedEndAt: new Date(expectedEndAtMs).toISOString(),
           graceMinutes: parseGraceMinutes(),
           secondaryWelfareHours: SECONDARY_WELFARE_HOURS,
+          customTimeWindow: customTimeWindow ? {
+            startTime: customTimeWindow.startTime,
+            endTime: customTimeWindow.endTime,
+            startLabel: customTimeWindow.startLabel,
+            endLabel: customTimeWindow.endLabel
+          } : null,
           fullName: `${document.getElementById('fname').value} ${document.getElementById('lname').value}`.trim(),
           phones: [...document.querySelectorAll('.phone-entry')].map((el) => el.value).filter(Boolean),
           nickname: document.getElementById('nickname').value.trim(),
@@ -3638,6 +3769,7 @@
           <p><span class="font-black text-blue-900">Location:</span> ${d.address || '-'}</p>
           <p><span class="font-black text-blue-900">State/LGA:</span> ${d.state || '-'} / ${d.lga || '-'}</p>
           <p><span class="font-black text-blue-900">Expected Duration:</span> ${Number(currentActive?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES)} min</p>
+          <p><span class="font-black text-blue-900">Time Window:</span> ${currentActive?.customTimeWindow?.startLabel && currentActive?.customTimeWindow?.endLabel ? `${currentActive.customTimeWindow.startLabel} - ${currentActive.customTimeWindow.endLabel}` : '-'}</p>
           <p><span class="font-black text-blue-900">Grace Period:</span> ${Number(currentActive?.graceMinutes || DEFAULT_GRACE_MINUTES)} min</p>
         `;
         const images = [...(d.strangerImageDataUrls || []), ...(d.supportImageDataUrls || [])];
@@ -3845,12 +3977,22 @@
         const faceMatchToggle = document.getElementById('face-match-enabled');
         if (faceMatchToggle) faceMatchToggle.checked = true;
         const durationSelect = document.getElementById('meetup-duration-select');
-        const durationCustom = document.getElementById('meetup-duration-custom');
+        const durationCustomWrap = document.getElementById('meetup-duration-custom-wrap');
+        const durationStart = document.getElementById('meetup-time-start');
+        const durationEnd = document.getElementById('meetup-time-end');
         const graceSelect = document.getElementById('meetup-grace-select');
         if (durationSelect) durationSelect.value = "";
-        if (durationCustom) {
-          durationCustom.value = "";
-          durationCustom.classList.add('hidden');
+        if (durationCustomWrap) durationCustomWrap.classList.add('hidden');
+        if (durationStart) durationStart.value = "";
+        if (durationEnd) durationEnd.value = "";
+        const extendStart = document.getElementById('extend-time-start');
+        const extendEnd = document.getElementById('extend-time-end');
+        const extendPin = document.getElementById('extend-pin');
+        if (extendStart) extendStart.value = "";
+        if (extendEnd) extendEnd.value = "";
+        if (extendPin) extendPin.value = "";
+        if (extendPin) {
+          removeFieldError(extendPin);
         }
         if (graceSelect) graceSelect.value = String(DEFAULT_GRACE_MINUTES);
       }
@@ -4093,9 +4235,10 @@
           requireFaceMatch: !!pendingMeetupData?.faceMatchEnabled,
           expectedDurationMinutes: Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES),
           graceMinutes: Number(pendingMeetupData?.graceMinutes || DEFAULT_GRACE_MINUTES),
-          expectedEndAt: Date.now() + (Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) * 60 * 1000),
-          graceEndsAt: Date.now() + ((Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) + Number(pendingMeetupData?.graceMinutes || DEFAULT_GRACE_MINUTES)) * 60 * 1000),
+          expectedEndAt: parseDateMs(pendingMeetupData?.expectedEndAt) || (Date.now() + (Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) * 60 * 1000)),
+          graceEndsAt: (parseDateMs(pendingMeetupData?.expectedEndAt) || (Date.now() + (Number(pendingMeetupData?.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) * 60 * 1000))) + (Number(pendingMeetupData?.graceMinutes || DEFAULT_GRACE_MINUTES) * 60 * 1000),
           welfareCheckAt: Date.now() + (SECONDARY_WELFARE_HOURS * 60 * 60 * 1000),
+          customTimeWindow: pendingMeetupData?.customTimeWindow || null,
           gpsLogs: [],
           details: pendingMeetupData || {},
           updates: []
@@ -4108,8 +4251,7 @@
         pendingMeetupData = null;
         document.getElementById('active-meetup-card-home').classList.remove('hidden');
         document.getElementById('no-active-meetup').classList.add('hidden');
-        document.getElementById('protection-text').innerText =
-          `The "Meetily ${activePackage}" switch is active. Check out within ${currentActive.expectedDurationMinutes} min (+${currentActive.graceMinutes} min grace) to avoid emergency escalation.`;
+        updateProtectionText();
         renderActiveMeetupHomeCard();
         renderMeetupDetails();
         startTimer();
@@ -4326,24 +4468,63 @@
         isEndingMeetup = false;
       }
 
-      async function extendActiveMeetup(minutesToAdd = 60) {
+      async function extendActiveMeetup() {
         if (!currentActive) return;
-        const add = Math.max(15, Math.min(12 * 60, Number(minutesToAdd) || 60));
-        currentActive.expectedDurationMinutes = Number(currentActive.expectedDurationMinutes || DEFAULT_MEETUP_DURATION_MINUTES) + add;
-        currentActive.expectedEndAt = Number(currentActive.expectedEndAt || Date.now()) + (add * 60 * 1000);
-        currentActive.graceEndsAt = Number(currentActive.graceEndsAt || Date.now()) + (add * 60 * 1000);
+        const startInput = document.getElementById('extend-time-start');
+        const endInput = document.getElementById('extend-time-end');
+        const pinInput = document.getElementById('extend-pin');
+        removeFieldError(startInput);
+        removeFieldError(endInput);
+        removeFieldError(pinInput);
+
+        const enteredPin = normalizePin(pinInput?.value || "");
+        const accountPin = normalizePin(signedInUser?.pin || "");
+        if (!enteredPin || enteredPin.length !== 4 || enteredPin !== accountPin) {
+          setFieldError(pinInput, "PIN is incorrect");
+          showUiAlert("Enter your correct 4-digit PIN to extend meetup.", "error");
+          return;
+        }
+
+        const range = resolveTimeWindow(startInput?.value || "", endInput?.value || "", Date.now());
+        if (!range) {
+          setFieldError(startInput, "Set a valid time range");
+          setFieldError(endInput, "Time range must be at least 15 minutes");
+          showUiAlert("Set valid start and end time before extending.", "error");
+          return;
+        }
+
+        currentActive.expectedEndAt = range.endAtMs;
+        currentActive.expectedDurationMinutes = Math.max(
+          15,
+          Math.round((range.endAtMs - Number(currentActive.start || Date.now())) / 60000)
+        );
+        currentActive.customTimeWindow = {
+          startTime: range.startTime,
+          endTime: range.endTime,
+          startLabel: range.startLabel,
+          endLabel: range.endLabel
+        };
+        if (!currentActive.details || typeof currentActive.details !== "object") {
+          currentActive.details = {};
+        }
+        currentActive.details.customTimeWindow = currentActive.customTimeWindow;
+        currentActive.graceEndsAt = Number(currentActive.expectedEndAt) + (Number(currentActive.graceMinutes || DEFAULT_GRACE_MINUTES) * 60 * 1000);
         reminderLeadSent = false;
         reminderDeadlineSent = false;
         emergencyTriggered = false;
+        updateProtectionText();
         renderMeetupDetails();
         startTimer();
-        showUiAlert(`Meetup extended by ${add} minutes.`, "success");
+        showUiAlert(`Meetup extended: ${range.startLabel} - ${range.endLabel}.`, "success");
         await sendMeetupUpdate({
           meetupId: currentActive.meetupId,
           updateType: "extend_time",
-          extendMinutes: add,
-          noteData: `Meetup extended by ${add} minutes`
+          extendMinutes: range.durationMinutes,
+          customTimeWindow: currentActive.customTimeWindow,
+          expectedEndAt: new Date(currentActive.expectedEndAt).toISOString(),
+          noteData: `Meetup extended to ${range.startLabel} - ${range.endLabel}`
         });
+        if (pinInput) pinInput.value = "";
       }
 
       function startTimer() {
@@ -4482,14 +4663,18 @@
       document.getElementById('log-package').onchange = syncPackageOptionCards;
       syncPackageOptionCards();
       const durationSelectEl = document.getElementById('meetup-duration-select');
-      const durationCustomEl = document.getElementById('meetup-duration-custom');
-      if (durationSelectEl && durationCustomEl) {
+      const durationCustomWrapEl = document.getElementById('meetup-duration-custom-wrap');
+      const durationStartEl = document.getElementById('meetup-time-start');
+      const durationEndEl = document.getElementById('meetup-time-end');
+      if (durationSelectEl && durationCustomWrapEl) {
         durationSelectEl.onchange = () => {
           const isCustom = durationSelectEl.value === "custom";
-          durationCustomEl.classList.toggle('hidden', !isCustom);
+          durationCustomWrapEl.classList.toggle('hidden', !isCustom);
           if (!isCustom) {
-            durationCustomEl.value = "";
-            removeFieldError(durationCustomEl);
+            if (durationStartEl) durationStartEl.value = "";
+            if (durationEndEl) durationEndEl.value = "";
+            removeFieldError(durationStartEl);
+            removeFieldError(durationEndEl);
           }
         };
       }
@@ -4503,7 +4688,7 @@
 
       // Add phone
       document.getElementById('btn-add-phone').onclick = addPhoneField;
-      document.getElementById('btn-extend-meetup').onclick = () => extendActiveMeetup(60);
+      document.getElementById('btn-extend-meetup').onclick = () => extendActiveMeetup();
 
       // GPS
       document.getElementById('btn-gps').onclick = activateGPS;
@@ -4872,6 +5057,7 @@
       // Keep tel fields numeric at all times
       document.addEventListener('input', (e) => {
         if (e.target.matches('input[type="tel"]')) sanitizeDigitsOnly(e.target);
+        if (e.target?.id === 'extend-pin') sanitizeDigitsOnly(e.target);
         if (e.target.matches('.form-input')) removeFieldError(e.target);
       });
       document.addEventListener('change', (e) => {
@@ -4895,5 +5081,6 @@
       window.addEventListener('beforeunload', stopPaymentPolling);
     });
   </script>
+  <script src="./pwa-register.js" defer></script>
 </body>
 </html>
